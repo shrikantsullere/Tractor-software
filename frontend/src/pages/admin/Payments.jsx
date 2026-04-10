@@ -1,0 +1,503 @@
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, Search, Filter, Download, MoreVertical, Eye, CreditCard, Clock, CheckCircle, X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Card, CardContent } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
+import { useBookings } from '../../context/BookingContext';
+import { api } from '../../lib/api';
+import { cn } from '../../lib/utils';
+
+export default function Payments() {
+  const [revenueData, setRevenueData] = useState({ totalRevenue: 0, payments: [] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isExporting, setIsExporting] = useState(false);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCount: 0 });
+  const [confirmSettleId, setConfirmSettleId] = useState(null);
+
+  const fetchPayments = async (page = 1) => {
+    try {
+      setIsLoading(true);
+      const result = await api.admin.getPayments({ 
+        page, 
+        status: statusFilter, 
+        search: searchTerm 
+      });
+      if (result.success) {
+        setRevenueData(result.data);
+        setPagination({
+          currentPage: result.data.currentPage,
+          totalPages: result.data.totalPages,
+          totalCount: result.data.totalCount
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch payments:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchPayments(1);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, statusFilter]);
+
+  const filteredPayments = useMemo(() => {
+    return (revenueData.payments || []).filter(p => {
+      const farmerName = p.booking?.farmer?.name || '';
+      const matchesSearch = 
+        p.id.toString().includes(searchTerm) || 
+        farmerName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const pStatus = p.booking?.paymentStatus?.toLowerCase() || (p.type === 'payment' ? 'paid' : 'pending');
+      const matchesStatus = statusFilter === 'all' || pStatus === statusFilter.toLowerCase();
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [revenueData.payments, searchTerm, statusFilter]);
+
+  const handleExport = () => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      
+      // 1. Header
+      doc.setFontSize(22);
+      doc.setTextColor(23, 23, 23);
+      doc.text("TRACTORLINK", 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("TREASURY | FINANCIAL LEDGER REPORT", 14, 28);
+      doc.text(`Exported: ${new Date().toLocaleString()} | Filter: ${statusFilter.toUpperCase()}`, 14, 34);
+
+      // 2. Data
+      const tableRows = revenueData.payments.map(p => [
+        String(p.id).toUpperCase(),
+        p.booking?.farmer?.name || 'Unknown',
+        p.booking?.service?.name || 'N/A',
+        new Date(p.createdAt).toLocaleDateString(),
+        p.type.toUpperCase(),
+        `Naira ${p.amount.toLocaleString()}`
+      ]);
+
+      // 3. Table
+      autoTable(doc, {
+        startY: 40,
+        head: [['LEDGER ID', 'ENTITY', 'SERVICE', 'DATE', 'TYPE', 'AMOUNT']],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [23, 23, 23], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8 },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+
+      doc.save(`tractorlink_treasury_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("PDF Export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleMarkAsPaid = async (id) => {
+    try {
+      const result = await api.admin.settleBooking(id, { method: 'cash' });
+      if (result.success) {
+        fetchPayments(pagination.currentPage);
+        setConfirmSettleId(null);
+      }
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const isAnyModalOpen = !!(confirmSettleId || selectedBooking);
+
+  // Handle scroll lock when modal is open
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isAnyModalOpen]);
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
+      
+      {/* Settle Confirmation Modal */}
+      {confirmSettleId && createPortal(
+        <div className="fixed inset-0 z-[1000] overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 bg-earth-main/60 backdrop-blur-xl"
+            onClick={() => setConfirmSettleId(null)}
+          />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setConfirmSettleId(null)}>
+            <motion.div 
+               initial={{ scale: 0.95, opacity: 0 }} 
+               animate={{ scale: 1, opacity: 1 }}
+               className="relative z-10 w-full max-w-sm bg-earth-card border border-earth-dark/10 rounded-[2.5rem] shadow-2xl p-8 text-center space-y-6"
+            >
+               <div className="w-16 h-16 rounded-2xl bg-primary-500/10 text-primary-400 flex items-center justify-center mx-auto border border-primary-500/20">
+                  <CreditCard size={32} />
+               </div>
+               <div>
+                  <h4 className="text-xl font-black text-earth-brown uppercase italic">Settle Payment</h4>
+                  <p className="text-xs font-bold text-earth-mut mt-2 uppercase tracking-widest leading-relaxed">Are you sure you want to mark this booking as settled? This will record a manual payment.</p>
+               </div>
+               <div className="flex gap-3">
+                  <Button variant="ghost" onClick={() => setConfirmSettleId(null)} className="flex-1 h-12 rounded-2xl bg-earth-card-alt border-earth-dark/15 text-earth-sub font-black uppercase text-[10px] tracking-widest hover:text-earth-brown">
+                    Cancel
+                  </Button>
+                  <Button onClick={() => handleMarkAsPaid(confirmSettleId)} className="flex-1 h-12 rounded-2xl bg-accent text-white font-black uppercase text-[10px] tracking-widest hover:opacity-90 shadow-lg shadow-accent/20">
+                    Confirm
+                  </Button>
+               </div>
+            </motion.div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Detail Modal Overlay */}
+      {selectedBooking && createPortal(
+        <div className="fixed inset-0 z-[999] overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 bg-earth-main/60 backdrop-blur-xl" 
+            onClick={() => setSelectedBooking(null)}
+          />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4 sm:p-6" onClick={(e) => e.target === e.currentTarget && setSelectedBooking(null)}>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative z-10 w-full max-w-lg bg-earth-card border border-earth-dark/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] rounded-[2.5rem] overflow-hidden"
+            >
+              <div className="p-6 md:p-8 border-b border-earth-dark/10 flex justify-between items-center bg-white/50">
+                <h3 className="text-xl md:text-2xl font-black text-earth-brown uppercase tracking-tight italic">Transaction Details</h3>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedBooking(null)} className="h-10 w-10 text-earth-mut hover:text-earth-brown hover:bg-earth-card-alt rounded-xl transition-all">
+                  <X size={20} />
+                </Button>
+              </div>
+              <CardContent className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Ledger ID</p>
+                    <p className="font-black text-earth-primary uppercase tracking-wider">{String(selectedBooking.id).toUpperCase()}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Total Invoice</p>
+                    <p className="text-xl md:text-2xl font-black text-earth-brown italic leading-none">₦{(selectedBooking.totalAmount || 0).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-earth-green tracking-widest mt-1">Paid: ₦{(selectedBooking.paidAmount || 0).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-red-500 tracking-widest">Rem: ₦{(selectedBooking.remainingAmount || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Farmer</p>
+                    <p className="font-black text-earth-brown text-lg leading-tight">{selectedBooking.booking?.farmer?.name || 'Unknown'}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Date</p>
+                    <p className="font-bold text-earth-brown">{new Date(selectedBooking.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                
+                <div className="p-5 md:p-6 bg-earth-main/50 rounded-[2rem] border border-earth-dark/10 shadow-inner space-y-4">
+                  <div className="flex justify-between items-center">
+                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Service Provided</p>
+                     <span className="text-sm font-black text-earth-brown uppercase italic">{selectedBooking.booking?.service?.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Land size</p>
+                     <span className="text-sm font-black text-earth-brown uppercase italic">{selectedBooking.booking?.landSize} Hectares</span>
+                  </div>
+                  <div className="h-px bg-earth-dark/5 my-2" />
+                  <div className="flex justify-between items-center pt-2">
+                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Payment Status</p>
+                     <div className="text-right">
+                       <Badge className={cn(
+                        "text-[9px] px-3 py-1 border uppercase font-black",
+                        selectedBooking.type === 'payment' ? 'bg-primary-500/10 text-primary-400 border-primary-500/20' : 
+                        'bg-red-500/10 text-red-500 border-red-500/20'
+                       )}>
+                        {selectedBooking.type === 'payment' ? 'SETTLED' : 'UNPAID'}
+                       </Badge>
+                       <p className="text-[9px] font-bold text-earth-mut uppercase tracking-widest mt-1">
+                         Method: {selectedBooking.method?.toUpperCase() || 'UNRECORDED'}
+                       </p>
+                     </div>
+                  </div>
+                </div>
+
+                {selectedBooking.type !== 'payment' && (
+                  <Button 
+                    onClick={() => { setConfirmSettleId(selectedBooking.bookingId); setSelectedBooking(null); }}
+                    className="w-full h-14 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-accent/20"
+                  >
+                    Confirm Settlement
+                  </Button>
+                )}
+              </CardContent>
+            </motion.div>
+          </div>
+        </div>,
+        document.body
+      )}
+      
+      {/* Header & Controls */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-earth-dark/10 pb-6">
+        <div>
+          <h2 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown mb-0.5 uppercase">Treasury</h2>
+          <p className="text-[9px] tracking-[0.2em] font-black uppercase text-earth-mut">Global Financial Ledger</p>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
+          <Input 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search Entity Name/ID..." 
+            className="bg-earth-card border-earth-dark/15 text-earth-brown font-bold h-10 rounded-lg text-xs md:w-64" 
+          />
+          
+          <div className="flex gap-2">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-earth-card border-earth-dark/15 text-earth-mut font-black uppercase text-[9px] tracking-widest h-10 px-3 rounded-lg outline-none cursor-pointer"
+            >
+              <option value="all">ALL STATUS</option>
+              <option value="paid">PAID</option>
+              <option value="partial">PARTIAL</option>
+              <option value="pending">PENDING</option>
+            </select>
+            
+            <Button 
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex-1 md:flex-none gap-2 font-black uppercase tracking-wider bg-earth-card hover:bg-earth-card-alt text-accent border border-earth-dark/10 h-10 px-4 text-[10px]"
+            >
+              <Download size={14} /> EXPORT
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid - Shrinked */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {(() => {
+          const totalRev = revenueData.totalRevenue || 0;
+          const pendRev = revenueData.totalUnpaid || 0;
+          const health = 99.8;
+
+          return (
+            <>
+              <Card className="bg-earth-card-alt shadow-sm border-earth-dark/15/50 rounded-2xl overflow-hidden group">
+                <CardContent className="p-5 flex justify-between items-center">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-earth-green mb-2">Total Revenue Confirmed</p>
+                    <h3 className="text-2xl font-black text-earth-brown italic">₦{totalRev.toLocaleString()}</h3>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-400 flex items-center justify-center border border-primary-500/20">
+                    <CheckCircle size={18} />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-earth-card-alt shadow-sm border-earth-dark/15/50 rounded-2xl overflow-hidden group">
+                <CardContent className="p-5 flex justify-between items-center">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-earth-primary mb-2">Pending Escrow</p>
+                    <h3 className="text-2xl font-black text-earth-brown italic">₦{pendRev.toLocaleString()}</h3>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center border border-accent/20">
+                    <Clock size={18} />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-earth-card/40 border-earth-dark/10 shadow-inner rounded-2xl overflow-hidden">
+                <CardContent className="p-5 flex justify-between items-center">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-earth-mut mb-2">System Health</p>
+                    <h3 className="text-2xl font-black text-earth-brown italic">{health}%</h3>
+                  </div>
+                  <CheckCircle2 size={18} className="text-primary-500" />
+                </CardContent>
+              </Card>
+            </>
+          );
+        })()}
+      </div>
+
+      {/* Main Ledger - Compact Table */}
+      <div className="space-y-3">
+        {/* Desktop Table */}
+        <Card className="hidden lg:block shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto text-left">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px] border-b border-earth-dark/15/30">
+                <tr>
+                  <th className="px-6 py-4">Ledger ID</th>
+                  <th className="px-6 py-4">Entity</th>
+                  <th className="px-6 py-4">Financials</th>
+                  <th className="px-6 py-4">Status & Method</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-earth-dark/10 bg-earth-card-alt">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center">
+                      <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={24} />
+                      <p className="text-[10px] font-black uppercase text-earth-mut">Syncing Ledger...</p>
+                    </td>
+                  </tr>
+                ) : filteredPayments.length > 0 ? filteredPayments.map((p) => {
+                  return (
+                    <tr key={p.id} className={cn("hover:bg-earth-card transition-all group", p.type === 'due' ? "bg-red-500/5" : "")}>
+                      <td className="px-6 py-3">
+                        <span className={cn(
+                          "font-bold text-[10px] bg-earth-card border px-2 py-1 rounded uppercase tracking-widest transition-colors",
+                          p.type === 'due' ? "text-red-400 border-red-500/20" : "text-earth-mut border-earth-dark/10 group-hover:text-earth-primary"
+                        )}>
+                          {String(p.id).toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <p className="font-black text-earth-brown text-sm">{p.booking?.farmer?.name || 'Unknown'}</p>
+                        <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">#{p.bookingId}</p>
+                      </td>
+                      <td className="px-6 py-3">
+                        <p className="font-black text-earth-brown text-base tracking-tight leading-tight">₦{(p.totalAmount || 0).toLocaleString()}</p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-[10px] text-earth-green/80 font-black tracking-widest uppercase">Paid: ₦{(p.paidAmount || 0).toLocaleString()}</span>
+                          <span className="text-[10px] text-red-400 font-black tracking-widest uppercase border-l border-earth-dark/20 pl-2">Rem: ₦{(p.remainingAmount || 0).toLocaleString()}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <Badge className={cn(
+                          "text-[8px] px-2 py-0 border uppercase font-black",
+                          p.type === 'payment' ? 'bg-primary-500/10 text-primary-400 border-primary-500/20' : 
+                          p.paymentStatus === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                          'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                        )}>
+                          {p.paymentStatus || (p.type === 'payment' ? 'SETTLED' : 'PENDING')}
+                        </Badge>
+                        <p className="text-[8px] text-earth-mut font-black uppercase tracking-widest mt-1">
+                          METHOD: {p.method?.toUpperCase() || 'UNRECORDED'}
+                        </p>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <div className="flex justify-end gap-1.5 transition-all">
+                          {p.type === 'due' && (
+                            <Button 
+                              size="sm"
+                              onClick={() => setConfirmSettleId(p.bookingId)}
+                              className="h-8 px-3 rounded-lg bg-accent hover:opacity-90 text-white font-black text-[9px] uppercase tracking-widest"
+                            >
+                              Settle
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setSelectedBooking(p)}
+                            className="w-8 h-8 rounded-lg bg-earth-card border border-earth-dark/15 text-earth-mut hover:text-earth-brown"
+                          >
+                            <Eye size={14} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-earth-mut font-black uppercase text-[10px] tracking-widest italic">Node Activity Null</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {pagination.totalPages > 1 && (
+            <div className="p-4 border-t border-earth-dark/15/30 bg-earth-card/20 flex items-center justify-between">
+               <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Showing page {pagination.currentPage} of {pagination.totalPages}</p>
+               <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" size="icon" 
+                    disabled={pagination.currentPage === 1 || isLoading}
+                    onClick={() => fetchPayments(pagination.currentPage - 1)}
+                    className="h-8 w-8 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown disabled:opacity-30"
+                  >
+                    <ChevronLeft size={16} />
+                  </Button>
+                  <Button 
+                    variant="ghost" size="icon" 
+                    disabled={pagination.currentPage === pagination.totalPages || isLoading}
+                    onClick={() => fetchPayments(pagination.currentPage + 1)}
+                    className="h-8 w-8 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown disabled:opacity-30"
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+               </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Mobile View remains functionally same but refined */}
+        <div className="lg:hidden space-y-3">
+          {filteredPayments.map((p) => {
+            return (
+              <Card key={p.id} className={cn("bg-earth-card-alt border-earth-dark/15/50 rounded-2xl overflow-hidden shadow-xl hover:scale-[1.02] transition-transform", p.type === 'due' ? "bg-red-500/5" : "")} onClick={() => setSelectedBooking(p)}>
+                <div className="p-4 border-b border-earth-dark/10 bg-earth-card/40 flex justify-between items-center">
+                  <span className={cn(
+                    "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-colors",
+                    p.type === 'due' ? "text-red-400 border-red-500/20 bg-red-900/20" : "text-earth-mut bg-earth-card border-earth-dark/15/50"
+                  )}>
+                    {String(p.id).toUpperCase()}
+                  </span>
+                  <Badge className={cn(
+                    "text-[8px] font-black uppercase tracking-widest px-2 py-0 border",
+                    p.type === 'payment' ? 'bg-primary-500/10 text-primary-400 border-primary-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                  )}>
+                    {p.type === 'payment' ? 'SETTLED' : 'UNPAID'}
+                  </Badge>
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h4 className="font-black text-earth-brown text-base leading-none tracking-tight">{p.booking?.farmer?.name || 'Unknown'}</h4>
+                      <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-1.5 italic">#{p.bookingId}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-earth-brown leading-none tracking-tighter">₦{(p.totalAmount || 0).toLocaleString()}</p>
+                      <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-1.5 leading-none">Rem: ₦{(p.remainingAmount || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+

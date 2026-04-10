@@ -1,0 +1,337 @@
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Briefcase, Plus, Search, Mail, Phone, Shield, ShieldCheck, ShieldAlert, Trash2, X, Loader2, RefreshCw, Key } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
+import { api } from '../../lib/api';
+import { cn } from '../../lib/utils';
+
+export default function Operators() {
+  const navigate = useNavigate();
+  const [operators, setOperators] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // New Operator Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: ''
+  });
+  const [formError, setFormError] = useState('');
+
+  const fetchOperators = async () => {
+    setIsLoading(true);
+    try {
+      const result = await api.admin.listOperators();
+      setOperators(result.data || []);
+    } catch (error) {
+      console.error("Failed to fetch operators:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOperators();
+  }, []);
+
+  // Handle scroll lock when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
+
+  const handleCreateOperator = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setFormError('');
+
+    try {
+      const result = await api.admin.createOperator(formData);
+      if (result.success) {
+        setOperators([result.data, ...operators]);
+        setIsModalOpen(false);
+        setFormData({ name: '', email: '', phone: '', password: '' });
+      }
+    } catch (error) {
+      setFormError(error.message || "Failed to create operator");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteOperator = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this operator? This will also remove their tractor assignments.")) return;
+    
+    try {
+      await api.admin.deleteOperator(id);
+      setOperators(prev => prev.filter(op => op.id !== id));
+    } catch (error) {
+      alert(error.message || "Failed to delete operator");
+    }
+  };
+
+  const filteredOperators = operators.filter(op => 
+    op.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    op.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (op.phone && op.phone.includes(searchTerm))
+  );
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Header & Controls */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-earth-dark/10 pb-8">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown mb-1 uppercase italic text-shadow-sm">Fleet Command</h2>
+          <p className="text-[10px] tracking-[0.3em] font-black uppercase text-earth-mut flex items-center gap-2">
+            <Briefcase size={12} className="text-earth-primary" /> Active Operator Directory
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="relative group w-full lg:w-72">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
+            <Input 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search Operators..." 
+              className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary shadow-inner"
+            />
+          </div>
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="h-12 px-8 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(255,152,0,0.2)] border-none"
+          >
+            <Plus size={18} className="mr-2" /> Recruit Operator
+          </Button>
+        </div>
+      </div>
+
+      {/* Operators Table */}
+      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-[2rem] overflow-hidden">
+        <CardHeader className="p-8 border-b border-earth-dark/10 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic">Certified Operators</CardTitle>
+            <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1">Authorized personnel managing agency equipment</CardDescription>
+          </div>
+          <button onClick={fetchOperators} className="p-2 hover:bg-earth-card-alt rounded-full transition-colors text-earth-mut hover:text-earth-brown">
+            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+          </button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-shadow-sm">
+              <thead className="bg-earth-dark text-earth-main">
+                <tr>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Personnel Entity</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Deployment State</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Reachability</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Commissioned</th>
+                  <th className="px-8 py-4 text-right text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Management</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-earth-dark/10">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="5" className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="animate-spin text-earth-primary" size={32} />
+                        <p className="text-xs font-black text-earth-mut uppercase tracking-widest">Accessing Encrypted Personnel Files...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredOperators.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-8 py-20 text-center">
+                      <p className="text-xs font-black text-earth-mut uppercase tracking-widest">No matching operator profiles found</p>
+                    </td>
+                  </tr>
+                ) : filteredOperators.map((op) => (
+                  <tr key={op.id} className="group hover:bg-earth-card transition-colors">
+                    <td className="px-8 py-6">
+                       <div className="flex items-center gap-4">
+                         <div className="w-10 h-10 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/15 shadow-inner group-hover:border-earth-primary/30 transition-all">
+                            <Briefcase size={18} />
+                         </div>
+                         <div>
+                            <p className="text-sm font-black text-earth-brown">{op.name}</p>
+                            <p className="text-[10px] font-bold text-earth-mut uppercase flex items-center gap-1 mt-0.5">
+                               ID: TL-OP-{op.id.toString().padStart(4, '0')}
+                            </p>
+                         </div>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                        <Badge className={cn(
+                            "text-[9px] px-3 py-1 border uppercase font-black tracking-[0.2em] h-6 rounded-lg",
+                            op.availability === 'available' 
+                                ? 'bg-earth-primary/10 text-earth-green border-emerald-500/20' 
+                                : 'bg-orange-500/10 text-orange-600 border-orange-500/20'
+                        )}>
+                            {op.availability}
+                        </Badge>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
+                             <Mail size={12} className="text-earth-mut" /> {op.email}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-earth-mut uppercase">
+                             <Phone size={10} className="text-earth-primary" /> {op.phone || 'N/A'}
+                          </div>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                        <p className="text-xs font-bold text-earth-brown">{new Date(op.createdAt).toLocaleDateString()}</p>
+                    </td>
+                    <td className="px-8 py-6 text-right flex items-center justify-end gap-2">
+                       <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteOperator(op.id)}
+                        className="text-[9px] px-4 font-black uppercase tracking-widest h-9 rounded-xl bg-red-500/5 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                      >
+                        <Trash2 size={12} className="mr-1" /> Decommission
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recruit Operator Modal */}
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[1000] overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl"
+            onClick={() => setIsModalOpen(false)}
+          />
+          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden border border-earth-dark/10"
+            >
+              <div className="bg-earth-dark p-8 text-earth-main flex justify-between items-center relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-earth-primary via-transparent to-transparent pointer-events-none"></div>
+                 <div className="relative z-10">
+                   <h3 className="text-xl font-black uppercase italic tracking-tight">Personnel Recruitment</h3>
+                   <p className="text-[10px] font-bold text-earth-main/60 uppercase tracking-[0.2em] mt-1">Issue New Operator Credentials</p>
+                 </div>
+                 <button onClick={() => setIsModalOpen(false)} className="relative z-10 h-10 w-10 flex items-center justify-center hover:bg-white/10 rounded-xl transition-colors">
+                   <X size={20} />
+                 </button>
+              </div>
+              
+              <form onSubmit={handleCreateOperator} className="p-8 space-y-6">
+                 {formError && (
+                   <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center">
+                      {formError}
+                   </div>
+                 )}
+
+                 <div className="space-y-4">
+                   <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Full Name</label>
+                     <div className="relative group">
+                       <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
+                       <Input 
+                         required
+                         value={formData.name}
+                         onChange={(e) => setFormData({...formData, name: e.target.value})}
+                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                         placeholder="e.g. Samuel Adebayo"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Email System Key</label>
+                     <div className="relative group">
+                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
+                       <Input 
+                         required
+                         type="email"
+                         value={formData.email}
+                         onChange={(e) => setFormData({...formData, email: e.target.value})}
+                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                         placeholder="operator@tractorlink.com"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Contact Phone</label>
+                      <div className="relative group">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
+                        <Input 
+                          value={formData.phone}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                          placeholder="+234 800 000 0000"
+                        />
+                      </div>
+                    </div>
+
+                   <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Initial Authorization Password</label>
+                     <div className="relative group">
+                       <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
+                       <Input 
+                         required
+                         type="password"
+                         value={formData.password}
+                         onChange={(e) => setFormData({...formData, password: e.target.value})}
+                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                         placeholder="••••••••"
+                       />
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="pt-4 flex gap-3">
+                   <Button 
+                     type="button" 
+                     variant="outline" 
+                     onClick={() => setIsModalOpen(false)}
+                     className="flex-1 h-12 rounded-2xl border-earth-dark/15 text-earth-sub font-black uppercase tracking-widest text-[10px] bg-earth-card-alt hover:text-earth-brown transition-all"
+                   >
+                     Cancel
+                   </Button>
+                   <Button 
+                     disabled={isSubmitting}
+                     className="flex-1 h-12 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-[10px] border-none shadow-[0_12px_24px_-8px_rgba(255,152,0,0.4)]"
+                   >
+                     {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : "Finalize Recruit"}
+                   </Button>
+                 </div>
+              </form>
+            </motion.div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+    </div>
+  );
+}
