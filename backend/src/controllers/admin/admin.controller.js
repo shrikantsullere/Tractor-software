@@ -11,13 +11,18 @@ export const getBookings = async (req, res) => {
     const { page, limit, status, search } = req.query;
     const result = await adminService.getAllBookings({ page, limit, status, search });
     
-    // Add formatted amounts
-    result.bookings = result.bookings.map(b => ({
+    // Ensure result.data is an array and add formatted amounts
+    const bookingsArray = Array.isArray(result.data) ? result.data : [];
+    const formattedBookings = bookingsArray.map(b => ({
       ...b,
       formatted_total_price: formatCurrency(b.totalPrice),
       formatted_base_price: formatCurrency(b.basePrice),
       formatted_distance_charge: formatCurrency(b.distanceCharge)
     }));
+
+    // Backwards compatibility: add 'bookings' key as some components might look for it
+    result.bookings = formattedBookings;
+    result.data = formattedBookings;
 
     return sendSuccess(res, result, "Bookings retrieved successfully");
   } catch (error) {
@@ -47,13 +52,20 @@ export const getPayments = async (req, res) => {
     const { page, limit, status, search } = req.query;
     const data = await adminService.getAllPayments({ page, limit, status, search });
     
-    // Add formatted fields
-    if (data.revenueData) {
-      data.revenueData.total = formatCurrency(data.revenueData.totalRaw || 0);
-      data.revenueData.payments = data.revenueData.payments.map(p => ({
+    // Add formatted fields to payments
+    if (data && data.payments) {
+      data.payments = data.payments.map(p => ({
         ...p,
-        formatted_amount: formatCurrency(p.amount)
+        formatted_amount: formatCurrency(p.amount),
+        formatted_total_amount: formatCurrency(p.totalAmount || 0),
+        formatted_paid_amount: formatCurrency(p.paidAmount || 0),
+        formatted_remaining_amount: formatCurrency(p.remainingAmount || 0)
       }));
+    }
+
+    // Add formatted aggregate revenue if present
+    if (data.totalRevenue !== undefined) {
+      data.formatted_total_revenue = formatCurrency(data.totalRevenue);
     }
 
     return sendSuccess(res, data, "Admin payment data retrieved successfully");

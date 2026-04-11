@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, Fragment } from 'react';
+import { useEffect, useMemo, useState, Fragment, useRef } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap, Polyline } from 'react-leaflet';
 import { io } from 'socket.io-client';
 import L from 'leaflet';
@@ -17,12 +17,45 @@ const farmerPinIcon = L.divIcon({
   iconAnchor: [18, 34],
 });
 
-const operatorIcon = L.divIcon({
-  html: '<div style="background:#16a34a;color:#fff;border-radius:12px;padding:8px 10px;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.25)">🚜</div>',
+const getDistance = (p1, p2) => {
+  const R = 6371e3; // metres
+  const φ1 = p1.lat * Math.PI/180;
+  const φ2 = p2.lat * Math.PI/180;
+  const Δφ = (p2.lat-p1.lat) * Math.PI/180;
+  const Δλ = (p2.lng-p1.lng) * Math.PI/180;
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // in metres
+};
+
+const getTractorIcon = (heading = 0) => L.divIcon({
+  html: `<div style="transform: rotate(${heading}deg); transition: transform 0.5s ease; background:#16a34a; color:#fff; border-radius:12px; padding:6px; font-size:20px; box-shadow:0 4px 14px rgba(0,0,0,.25); display: flex; items-center; justify-center;">🚜</div>`,
   className: '',
-  iconSize: [42, 42],
-  iconAnchor: [21, 38],
+  iconSize: [38, 38],
+  iconAnchor: [19, 19],
 });
+
+const getRoute = async (start, end) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+    
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) throw new Error('Busy');
+    const data = await res.json();
+    const route = data?.routes?.[0];
+    if (!route) throw new Error('No route');
+
+    return route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  } catch (error) {
+    return [[start.lat, start.lng], [end.lat, end.lng]];
+  }
+};
 
 function FitBounds({ markers }) {
   const map = useMap();
@@ -44,27 +77,12 @@ function RecenterMap({ center }) {
 
 export default function LiveTracking() {
   const [activeJobs, setActiveJobs] = useState([]);
-  const [operatorLocations, setOperatorLocations] = useState({}); // { operatorId: { lat, lng } }
+  const [operatorLocations, setOperatorLocations] = useState({}); // { operatorId: { lat, lng, heading } }
+  const [jobRoutes, setJobRoutes] = useState({}); // { jobId: coordinates[] }
   const [error, setError] = useState('');
   const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
   const [loading, setLoading] = useState(true);
   const [deviceLocation, setDeviceLocation] = useState(null);
-
-  // Collect all relevant marker positions for bounds fitting
-  const allMarkers = useMemo(() => {
-    const points = [];
-    if (deviceLocation) points.push(deviceLocation);
-    activeJobs.forEach(job => {
-      if (Number.isFinite(job.farmerLatitude)) {
-        points.push({ lat: job.farmerLatitude, lng: job.farmerLongitude });
-      }
-      const opLoc = operatorLocations[job.operatorId];
-      if (opLoc) {
-        points.push({ lat: opLoc.lat, lng: opLoc.lng });
-      }
-    });
-    return points;
-  }, [activeJobs, operatorLocations, deviceLocation]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -93,30 +111,88 @@ export default function LiveTracking() {
     const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
     
     socket.on('connect', () => {
-      // Admin joins special overview room
       socket.emit('tracking:join', { role: 'admin' });
     });
 
     socket.on('location:update', (payload) => {
       if (!payload || !payload.operatorId) return;
-      setOperatorLocations(prev => ({
-        ...prev,
-        [payload.operatorId]: { 
-          lat: payload.lat, 
-          lng: payload.lng,
-          bookingId: payload.bookingId 
+      
+      setOperatorLocations(prev => {
+        const oldPos = prev[payload.operatorId];
+        let heading = 0;
+        if (oldPos) {
+          // Calculate heading
+          const dy = payload.lat - oldPos.lat;
+          const dx = Math.cos(oldPos.lat * Math.PI / 180) * (payload.lng - oldPos.lng);
+          heading = Math.atan2(dx, dy) * 180 / Math.PI;
         }
-      }));
+
+        return {
+          ...prev,
+          [payload.operatorId]: { 
+            lat: payload.lat, 
+            lng: payload.lng,
+            bookingId: payload.bookingId,
+            heading: heading || oldPos?.heading || 0
+          }
+        };
+      });
     });
 
     socket.on('connect_error', () => setError('Realtime socket disconnected.'));
 
-    return () => socket.disconnect();
+    return () => {
+      if (socket.connected) {
+        socket.disconnect();
+      } else {
+        socket.once('connect', () => socket.disconnect());
+      }
+    };
   }, []);
 
+  // Track last known route update points to avoid excessive API calls
+  const lastRouteUpdateRef = useRef({}); // { jobId: { lat, lng } }
+
+  // Update routes when jobs or operator movements are detected
+  useEffect(() => {
+    const updateDynamicRoutes = async () => {
+      for (const job of activeJobs) {
+        const opLoc = operatorLocations[job.operatorId];
+        if (!opLoc || !Number.isFinite(job.farmerLatitude)) continue;
+
+        const lastUpdate = lastRouteUpdateRef.current[job.id];
+        const distMoved = lastUpdate ? getDistance(opLoc, lastUpdate) : Infinity;
+
+        // Update if first time or moved > 50m
+        if (distMoved > 50) {
+          await new Promise(r => setTimeout(r, 800)); // Rate limit
+          const route = await getRoute(opLoc, { lat: job.farmerLatitude, lng: job.farmerLongitude });
+          setJobRoutes(prev => ({ ...prev, [job.id]: route }));
+          lastRouteUpdateRef.current[job.id] = { lat: opLoc.lat, lng: opLoc.lng };
+        }
+      }
+    };
+    updateDynamicRoutes();
+  }, [activeJobs, operatorLocations]);
+
+  const allMarkers = useMemo(() => {
+    const points = [];
+    if (deviceLocation) points.push(deviceLocation);
+    activeJobs.forEach(job => {
+      if (Number.isFinite(job.farmerLatitude)) {
+        points.push({ lat: job.farmerLatitude, lng: job.farmerLongitude });
+      }
+      const opLoc = operatorLocations[job.operatorId];
+      if (opLoc) {
+        points.push({ lat: opLoc.lat, lng: opLoc.lng });
+      }
+    });
+    return points;
+  }, [activeJobs, operatorLocations, deviceLocation]);
+
   const initialCenter = useMemo(() => {
-    if (allMarkers.length > 0) return allMarkers[0];
-    return DEFAULT_CENTER;
+    if (allMarkers.length > 0) return [allMarkers[0].lat, allMarkers[0].lng];
+    return [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
   }, [allMarkers]);
 
   if (loading) return <div className="p-8 text-center text-earth-brown uppercase font-black text-xs tracking-widest">Scanning Active Missions...</div>;
@@ -175,6 +251,8 @@ export default function LiveTracking() {
 
           {activeJobs.map((job) => {
             const opLoc = operatorLocations[job.operatorId];
+            const route = jobRoutes[job.id];
+
             return (
               <Fragment key={job.id}>
                 {/* Farmer Fixed Position */}
@@ -200,7 +278,7 @@ export default function LiveTracking() {
                 {opLoc && (
                   <Marker
                     position={[opLoc.lat, opLoc.lng]}
-                    icon={operatorIcon}
+                    icon={getTractorIcon(opLoc.heading)}
                   >
                     <Popup>
                       <div className="p-2 space-y-1">
@@ -215,8 +293,22 @@ export default function LiveTracking() {
                   </Marker>
                 )}
 
-                {/* Connection Line (Route) */}
-                {opLoc && Number.isFinite(job.farmerLatitude) && (
+                {/* Road Route Polyline */}
+                {route && route.length > 1 && (
+                  <>
+                    <Polyline 
+                      positions={route}
+                      pathOptions={{ color: '#16a34a', weight: 6, opacity: 0.3 }}
+                    />
+                    <Polyline 
+                      positions={route}
+                      pathOptions={{ color: '#10b981', weight: 2, opacity: 1, lineJoin: 'round' }}
+                    />
+                  </>
+                )}
+
+                {/* Dashed Connection to target if route not yet loaded */}
+                {opLoc && Number.isFinite(job.farmerLatitude) && (!route || route.length === 0) && (
                   <Polyline 
                     positions={[
                       [opLoc.lat, opLoc.lng],
@@ -240,11 +332,15 @@ export default function LiveTracking() {
            <p className="text-[9px] font-black uppercase tracking-widest text-earth-mut border-b border-earth-dark/5 pb-2">Legend</p>
            <div className="flex items-center gap-3">
               <span className="text-lg">🚜</span>
-              <span className="text-[10px] font-bold text-earth-brown uppercase">Active Tractor</span>
+              <span className="text-[10px] font-bold text-earth-brown uppercase">Active Tractor (Movement Aware)</span>
            </div>
            <div className="flex items-center gap-3">
               <span className="text-lg">📍</span>
               <span className="text-[10px] font-bold text-earth-brown uppercase">Target Farm</span>
+           </div>
+           <div className="flex items-center gap-3">
+              <div className="w-8 h-1 bg-earth-green rounded-full"></div>
+              <span className="text-[10px] font-bold text-earth-brown uppercase">Active Road Route</span>
            </div>
         </div>
       </div>
