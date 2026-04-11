@@ -7,6 +7,8 @@ import { useBookings } from '../../context/BookingContext';
 import { api } from '../../lib/api';
 import { Badge } from '../../components/ui/Badge';
 import { cn } from '../../lib/utils';
+import { formatCurrency } from '../../lib/format';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function Payments() {
   const { fetchBookings } = useBookings();
@@ -16,6 +18,9 @@ export default function Payments() {
   const [selectedTx, setSelectedTx] = useState(null);
   const [paymentPortal, setPaymentPortal] = useState({ open: false, type: '', amount: 0, targetId: null });
   const [paymentStep, setPaymentStep] = useState('method'); // method | processing | success
+
+  // Lock background scroll when any modal is open
+  useScrollLock(selectedTx || paymentPortal.open);
 
   const fetchPending = async () => {
     try {
@@ -88,8 +93,7 @@ export default function Payments() {
               <CardContent className="p-6 md:p-8 relative z-10">
                 <p className="text-earth-mut text-[9px] font-black tracking-widest uppercase mb-2">Total Outstanding</p>
                 <div className="flex items-baseline gap-1.5 mb-6">
-                  <span className="text-xl font-black text-earth-primary/50 italic">₦</span>
-                  <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-earth-main tabular-nums">{pendingData.totalOutstanding.toLocaleString()}</h2>
+                  <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-earth-main tabular-nums">{formatCurrency(pendingData.totalOutstanding)}</h2>
                 </div>
                 <Button 
                   onClick={handlePayFull}
@@ -167,7 +171,7 @@ export default function Payments() {
                   </div>
                   <div className="sm:text-right flex items-center sm:items-end justify-between sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-earth-dark/10 gap-5">
                     <div className="hidden sm:block">
-                      <p className="font-black text-base md:text-lg text-earth-brown block tabular-nums tracking-tighter">₦{booking.remainingAmount.toLocaleString()}</p>
+                      <p className="font-black text-base md:text-lg text-earth-brown block tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
                       <Badge className={cn(
                         "mt-1 text-[8px] px-2 py-0 border-none font-black uppercase tracking-widest",
                         booking.paymentStatus === 'full' ? 'bg-earth-primary/10 text-earth-green' : 
@@ -192,7 +196,7 @@ export default function Payments() {
                     
                     {/* Mobile Only Amount Display */}
                     <div className="sm:hidden text-right">
-                       <p className="font-black text-lg text-earth-brown tabular-nums tracking-tighter">₦{booking.remainingAmount.toLocaleString()}</p>
+                       <p className="font-black text-lg text-earth-brown tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
                        <p className={cn(
                          "text-[7px] font-black uppercase tracking-widest",
                          booking.paymentStatus === 'full' ? 'text-earth-green' : 
@@ -216,9 +220,9 @@ export default function Payments() {
       {/* Transaction Detail Modal - Scaled Down */}
       <AnimatePresence>
         {selectedTx && (
-          <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedTx(null)} className="absolute inset-0 bg-earth-dark/95 backdrop-blur-xl" />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-earth-card border border-earth-dark/10 w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl relative z-10">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 my-auto">
               <div className="p-6 border-b border-earth-dark/10 bg-earth-card/30 flex justify-between items-center">
                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-earth-brown">
@@ -239,7 +243,7 @@ export default function Payments() {
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-black text-earth-mut uppercase tracking-widest border-t border-earth-dark/10/50 pt-3">
                        <span className="text-earth-primary">Total Dues</span>
-                       <span className="text-xl text-earth-brown font-black tabular-nums tracking-tighter">₦{selectedTx.totalAmount.toLocaleString()}</span>
+                       <span className="text-xl text-earth-brown font-black tabular-nums tracking-tighter">{formatCurrency(selectedTx.totalAmount)}</span>
                     </div>
                  </div>
                  <div className="grid grid-cols-2 gap-3">
@@ -255,14 +259,14 @@ export default function Payments() {
       {/* Payment Portal - Compact */}
       <AnimatePresence>
         {paymentPortal.open && (
-          <div className="fixed inset-0 z-[110000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[110000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-earth-dark/90 backdrop-blur-3xl" />
             
             <motion.div 
                initial={{ y: 10, opacity: 0 }} 
                animate={{ y: 0, opacity: 1 }} 
                exit={{ y: 10, opacity: 0 }}
-               className="bg-earth-card border border-earth-dark/10 w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 border-t-2 border-t-accent"
+               className="bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 border-t-2 border-t-accent my-auto"
             >
               {paymentStep === 'method' && (
                 <div className="p-7 space-y-6">
@@ -276,7 +280,7 @@ export default function Payments() {
 
                   <div className="bg-earth-card border border-earth-dark/10 p-5 rounded-2xl text-center">
                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-1.5">Amount Payable</p>
-                     <p className="text-3xl font-black text-earth-brown italic tracking-tighter">₦{paymentPortal.amount.toLocaleString()}</p>
+                     <p className="text-3xl font-black text-earth-brown italic tracking-tighter">{formatCurrency(paymentPortal.amount)}</p>
                   </div>
 
                   <div className="space-y-2">

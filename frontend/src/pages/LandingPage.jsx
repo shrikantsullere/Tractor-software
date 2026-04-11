@@ -24,6 +24,8 @@ import {
   PhoneCall, 
   Navigation 
 } from 'lucide-react';
+import useScrollLock from '../hooks/useScrollLock';
+import { formatCurrency } from '../lib/format';
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,6 +33,9 @@ const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, role } = useAuth();
+
+  // Unified scroll lock
+  useScrollLock(isContactModalOpen);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -324,7 +329,7 @@ const LandingPage = () => {
               <div className="space-y-6">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
                   <span className="font-medium text-[#1F2937]/70">Base Rate per Hectare</span>
-                  <span className="font-bold text-primary">₦25,000</span>
+                  <span className="font-bold text-primary">{formatCurrency(25000)}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
                   <span className="font-medium text-[#1F2937]/70">Total Hectares</span>
@@ -333,12 +338,12 @@ const LandingPage = () => {
                 <div className="h-px bg-gray-200"></div>
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
                   <span className="font-medium text-[#1F2937]/70">Distance Charge (Fixed)</span>
-                  <span className="font-bold text-accent">+ ₦5,000</span>
+                  <span className="font-bold text-accent">+ {formatCurrency(5000)}</span>
                 </div>
                 <div className="h-px bg-gray-600"></div>
                 <div className="flex justify-between items-center p-6 bg-accent text-white rounded-2xl shadow-xl">
                   <span className="text-xl font-bold">Total Quote</span>
-                  <span className="text-3xl font-extrabold text-white">₦130,000</span>
+                  <span className="text-3xl font-extrabold text-white">{formatCurrency(130000)}</span>
                 </div>
                 <div className="flex justify-center">
                   <span className="inline-block py-2 px-4 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest mt-4">
@@ -611,7 +616,7 @@ const LandingPage = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100"
+              className="relative bg-white w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 my-auto"
             >
               <div className="p-8 md:p-12">
                 <div className="flex justify-between items-start mb-8">

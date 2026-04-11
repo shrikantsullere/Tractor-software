@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import AddFarmerModal from '../../components/admin/AddFarmerModal';
 
 export default function Farmers() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Farmers() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchFarmers = async () => {
     setIsLoading(true);
@@ -72,9 +74,15 @@ export default function Farmers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search Farmers/Locations..." 
-              className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-1 focus:ring-earth-primary/30 font-bold"
+              className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-1 focus:ring-earth-primary/30 font-bold shadow-inner"
             />
           </div>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="h-12 px-8 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-accent/20 border-none transition-all active:scale-[0.98]"
+          >
+            <Users size={18} className="mr-2" /> Add Farmer
+          </Button>
         </div>
       </div>
 
@@ -303,6 +311,11 @@ export default function Farmers() {
         </CardContent>
       </Card>
 
+      <AddFarmerModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onRefresh={fetchFarmers} 
+      />
     </div>
   );
 }

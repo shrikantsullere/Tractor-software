@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function Tractors() {
   const [tractors, setTractors] = useState([]);
@@ -46,17 +47,8 @@ export default function Tractors() {
     fetchData();
   }, []);
 
-  // Handle scroll lock when modal is open
-  useEffect(() => {
-    if (showAddModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showAddModal]);
+  // Lock background scroll when open
+  useScrollLock(showAddModal);
 
   const handleCreateTractor = async (e) => {
     e.preventDefault();
@@ -357,8 +349,8 @@ export default function Tractors() {
              className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl animate-in fade-in duration-300"
              onClick={closeModal}
            />
-           <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-              <Card className="relative z-10 w-full max-w-md bg-earth-card border-earth-dark/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rounded-[2.5rem] overflow-hidden border-t-8 border-t-accent animate-in zoom-in-95 duration-300">
+           <div className="fixed inset-0 overflow-y-auto flex items-start md:items-center justify-center p-4 py-12 md:py-20" onClick={(e) => e.target === e.currentTarget && closeModal()}>
+              <Card className="relative z-10 w-full max-w-md bg-earth-card border-earth-dark/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rounded-2xl md:rounded-[2.5rem] overflow-hidden border-t-8 border-t-accent animate-in zoom-in-95 duration-300 my-auto">
                  <CardHeader className="p-8 pb-4 border-b border-earth-dark/5">
                     <div className="w-16 h-16 rounded-3xl bg-accent/10 flex items-center justify-center text-accent mb-6 shadow-inner mx-auto">
                        {isEditing ? <Wrench size={32} className="stroke-[2.5]" /> : <Truck size={32} className="stroke-[2.5]" />}

@@ -1,4 +1,5 @@
 import * as fuelService from '../../services/fuel.service.js';
+import { formatCurrency } from '../../utils/format.js';
 
 export const addFuelLog = async (req, res) => {
   try {
@@ -12,7 +13,11 @@ export const addFuelLog = async (req, res) => {
 export const getFuelHistory = async (req, res) => {
   try {
     const history = await fuelService.getFuelHistory(req.user.id);
-    res.json({ success: true, data: history });
+    const formattedHistory = history.map(log => ({
+      ...log,
+      formatted_cost: formatCurrency(log.cost)
+    }));
+    res.json({ success: true, data: formattedHistory });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -21,7 +26,11 @@ export const getFuelHistory = async (req, res) => {
 export const getFuelSummary = async (req, res) => {
   try {
     const summary = await fuelService.getFuelSummary(req.user.id);
-    res.json({ success: true, data: summary });
+    const formattedSummary = {
+      ...summary,
+      formatted_total_cost: formatCurrency(summary.total_cost)
+    };
+    res.json({ success: true, data: formattedSummary });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -8,7 +8,9 @@ import { cn } from '../../lib/utils';
 import { useSettings } from '../../context/SettingsContext';
 import { useBookings } from '../../context/BookingContext';
 import { api } from '../../lib/api';
+import { formatCurrency } from '../../lib/format';
 import RequestLocationMap from '../../components/map/RequestLocationMap';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function BookTractor() {
   const navigate = useNavigate();
@@ -38,6 +40,9 @@ export default function BookTractor() {
     roadDistance: 0,
     zoneName: ""
   });
+
+  // Lock background scroll when modal/overlay is open
+  useScrollLock(bookingStep === 2 || isBooking);
 
   // Price Preview logic
   useEffect(() => {
@@ -165,7 +170,7 @@ export default function BookTractor() {
              </div>
              <div className="flex justify-between border-b border-earth-dark/10 pb-3">
                <span className="text-[10px] font-black text-earth-mut uppercase">Total Amount</span>
-               <span className="text-sm font-black text-primary">₦{totalCost.toLocaleString()}</span>
+               <span className="text-sm font-black text-primary">{formatCurrency(totalCost)}</span>
              </div>
              <div className="flex justify-between border-b border-earth-dark/10 pb-3">
                <span className="text-[10px] font-black text-earth-mut uppercase">Payment Plan</span>
@@ -264,7 +269,7 @@ export default function BookTractor() {
                       >
                         <Tractor size={18} className={cn("mb-2 transition-colors", service === label ? "text-earth-primary" : "text-earth-mut group-hover:text-earth-brown")} />
                         <span className={cn("font-black text-[11px] uppercase tracking-wide", service === label ? "text-earth-primary" : "text-earth-brown")}>{label}</span>
-                        <span className={cn("text-[8px] font-bold mt-1 tracking-widest", service === label ? "text-earth-primary/80" : "text-earth-mut")}>₦{s.baseRatePerHectare}/ha</span>
+                        <span className={cn("text-[8px] font-bold mt-1 tracking-widest", service === label ? "text-earth-primary/80" : "text-earth-mut")}>{formatCurrency(s.baseRatePerHectare)}/ha</span>
                       </button>
                     );
                   })}
@@ -416,7 +421,7 @@ export default function BookTractor() {
               <div className="space-y-3">
                 <div className="flex justify-between text-xs font-bold text-earth-sub">
                   <span>Base Price ({landSize || 0} ha)</span>
-                  <span className="text-earth-brown">₦{baseTotal.toLocaleString()}</span>
+                  <span className="text-earth-brown">{formatCurrency(baseTotal)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold text-earth-sub">
                   <div className="flex flex-col">
@@ -428,16 +433,16 @@ export default function BookTractor() {
                   <span className="text-earth-brown">
                     {priceDetails.distanceCharge === 0 
                       ? "Included" 
-                      : `₦${distanceSurcharge.toLocaleString()}`
+                      : formatCurrency(distanceSurcharge)
                     }
                   </span>
                 </div>
                 <div className="pt-3 border-t border-earth-dark/10 flex justify-between items-end">
                   <span className="text-xs font-black text-earth-brown uppercase underline decoration-earth-primary underline-offset-4 decoration-2">Total Amount</span>
-                  <span className="text-2xl font-black text-earth-primary tracking-tighter">₦{totalCost.toLocaleString()}</span>
+                  <span className="text-2xl font-black text-earth-primary tracking-tighter">{formatCurrency(totalCost)}</span>
                 </div>
-                <p className="text-[9px] text-earth-mut font-bold uppercase text-right tracking-widest">Quote valid for 48 hours</p>
               </div>
+                <p className="text-[9px] text-earth-mut font-bold uppercase text-right tracking-widest">Quote valid for 48 hours</p>
 
               <div className="flex flex-col gap-3 pt-2">
                 <Button 
@@ -466,10 +471,9 @@ export default function BookTractor() {
         </div>
       </div>
 
-      {/* Payment Selection Overlay */}
       {bookingStep === 2 && (
-        <div className="fixed inset-0 bg-earth-dark/95 z-[3000] flex items-center justify-center p-4">
-          <div className="bg-earth-card border border-earth-dark/10 w-full max-w-lg p-8 rounded-[2.5rem] shadow-2xl relative space-y-8 animate-in fade-in zoom-in slide-in-from-bottom-10 duration-500">
+        <div className="fixed inset-0 bg-earth-dark/95 z-[3000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
+          <div className="bg-earth-card border border-earth-dark/10 w-full max-w-[420px] p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-2xl relative space-y-6 md:space-y-8 animate-in fade-in zoom-in slide-in-from-bottom-10 duration-500 my-auto">
             <button 
               onClick={() => setBookingStep(1)}
               className="absolute top-6 right-6 text-earth-mut hover:text-earth-brown transition-colors"
@@ -487,7 +491,7 @@ export default function BookTractor() {
                 { 
                   id: 'full', 
                   label: 'Pay Full Now', 
-                  sub: `₦${totalCost.toLocaleString()}`, 
+                  sub: formatCurrency(totalCost), 
                   desc: 'Instant settlement via Online Gateway',
                   icon: CheckCircle,
                   color: 'text-earth-green',
@@ -496,7 +500,7 @@ export default function BookTractor() {
                 { 
                   id: 'partial', 
                   label: 'Pay 50% Advance', 
-                  sub: `₦${(totalCost * 0.5).toLocaleString()}`, 
+                  sub: formatCurrency(totalCost * 0.5), 
                   desc: 'Secure your booking now, pay rest later',
                   icon: Clock,
                   color: 'text-blue-500',
@@ -505,7 +509,7 @@ export default function BookTractor() {
                 { 
                   id: 'later', 
                   label: 'Pay Later (Cash)', 
-                  sub: '₦0 Now', 
+                  sub: `${formatCurrency(0)} Now`, 
                   desc: 'Pay full amount at the Hub/On-site',
                   icon: Info,
                   color: 'text-earth-mut',

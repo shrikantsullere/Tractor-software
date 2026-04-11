@@ -1,6 +1,7 @@
 import * as adminService from '../../services/admin.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 import { updateFarmerStatusSchema } from '../../schema/farmer.schema.js';
+import { formatCurrency } from '../../utils/format.js';
 
 /**
  * Get bookings for admin dashboard with pagination and filters.
@@ -9,6 +10,15 @@ export const getBookings = async (req, res) => {
   try {
     const { page, limit, status, search } = req.query;
     const result = await adminService.getAllBookings({ page, limit, status, search });
+    
+    // Add formatted amounts
+    result.bookings = result.bookings.map(b => ({
+      ...b,
+      formatted_total_price: formatCurrency(b.totalPrice),
+      formatted_base_price: formatCurrency(b.basePrice),
+      formatted_distance_charge: formatCurrency(b.distanceCharge)
+    }));
+
     return sendSuccess(res, result, "Bookings retrieved successfully");
   } catch (error) {
     return sendError(res, error.message, 500);
@@ -36,6 +46,16 @@ export const getPayments = async (req, res) => {
   try {
     const { page, limit, status, search } = req.query;
     const data = await adminService.getAllPayments({ page, limit, status, search });
+    
+    // Add formatted fields
+    if (data.revenueData) {
+      data.revenueData.total = formatCurrency(data.revenueData.totalRaw || 0);
+      data.revenueData.payments = data.revenueData.payments.map(p => ({
+        ...p,
+        formatted_amount: formatCurrency(p.amount)
+      }));
+    }
+
     return sendSuccess(res, data, "Admin payment data retrieved successfully");
   } catch (error) {
     return sendError(res, error.message, 500);

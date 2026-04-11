@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { useEffect, useMemo, useState, Fragment } from 'react';
+import { MapContainer, Marker, Popup, TileLayer, useMap, Polyline } from 'react-leaflet';
 import { io } from 'socket.io-client';
 import L from 'leaflet';
 import { api } from '../../lib/api';
-import { Button } from '../../components/ui/Button';
 import 'leaflet/dist/leaflet.css';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
@@ -11,7 +10,7 @@ const OPENFREE_TILES = 'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}
 const OSM_FALLBACK_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 
-const requestPinIcon = L.divIcon({
+const farmerPinIcon = L.divIcon({
   html: '<div style="background:#dc2626;color:white;border-radius:9999px;padding:8px 10px;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.25)">📍</div>',
   className: '',
   iconSize: [36, 36],
@@ -25,74 +24,110 @@ const operatorIcon = L.divIcon({
   iconAnchor: [21, 38],
 });
 
+function FitBounds({ markers }) {
+  const map = useMap();
+  useEffect(() => {
+    if (markers.length === 0) return;
+    const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }, [markers, map]);
+  return null;
+}
+
 export default function LiveTracking() {
-  const [requests, setRequests] = useState([]);
+  const [activeJobs, setActiveJobs] = useState([]);
+  const [operatorLocations, setOperatorLocations] = useState({}); // { operatorId: { lat, lng } }
   const [error, setError] = useState('');
   const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
-  const [operatorLocation, setOperatorLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Collect all relevant marker positions for bounds fitting
+  const allMarkers = useMemo(() => {
+    const points = [];
+    activeJobs.forEach(job => {
+      if (Number.isFinite(job.farmerLatitude)) {
+        points.push({ lat: job.farmerLatitude, lng: job.farmerLongitude });
+      }
+      const opLoc = operatorLocations[job.operatorId];
+      if (opLoc) {
+        points.push({ lat: opLoc.lat, lng: opLoc.lng });
+      }
+    });
+    return points;
+  }, [activeJobs, operatorLocations]);
 
   useEffect(() => {
-    const loadInitial = async () => {
+    const loadData = async () => {
       try {
-        const res = await api.requests.listAll();
+        setLoading(true);
+        const res = await api.admin.getActiveJobs();
         if (res?.success) {
-          setRequests(res.data || []);
+          setActiveJobs(res.data || []);
         }
       } catch (err) {
-        setError(err.message || 'Failed to load request map.');
+        setError(err.message || 'Failed to load active jobs.');
+      } finally {
+        setLoading(false);
       }
     };
-    loadInitial();
+    loadData();
 
     const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
+    
     socket.on('connect', () => {
-      socket.emit('tracking:join', { roomId: 'default-room', role: 'admin' });
+      // Admin joins special overview room
+      socket.emit('tracking:join', { role: 'admin' });
     });
-    socket.on('tracking:state', (payload) => {
-      if (payload?.operatorLocation) {
-        setOperatorLocation(payload.operatorLocation);
-      }
-    });
+
     socket.on('location:update', (payload) => {
-      if (!payload) return;
-      setOperatorLocation({ lat: payload.lat, lng: payload.lng });
+      if (!payload || !payload.operatorId) return;
+      setOperatorLocations(prev => ({
+        ...prev,
+        [payload.operatorId]: { 
+          lat: payload.lat, 
+          lng: payload.lng,
+          bookingId: payload.bookingId 
+        }
+      }));
     });
-    socket.on('new:request', (payload) => {
-      setRequests((prev) => [payload, ...prev.filter((item) => item.id !== payload.id)]);
-    });
-    socket.on('request:updated', (payload) => {
-      setRequests((prev) => prev.map((item) => (item.id === payload.id ? payload : item)));
-    });
+
     socket.on('connect_error', () => setError('Realtime socket disconnected.'));
 
     return () => socket.disconnect();
   }, []);
 
   const center = useMemo(() => {
-    const first = requests.find((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
-    if (!first) return DEFAULT_CENTER;
-    return { lat: first.latitude, lng: first.longitude };
-  }, [requests]);
-
-  const acceptRequest = async (id) => {
-    try {
-      const res = await api.requests.accept(id);
-      if (res?.success) {
-        setRequests((prev) => prev.map((item) => (item.id === id ? res.data : item)));
+    if (activeJobs.length > 0) {
+      const first = activeJobs[0];
+      if (Number.isFinite(first.farmerLatitude) && Number.isFinite(first.farmerLongitude)) {
+        return { lat: first.farmerLatitude, lng: first.farmerLongitude };
       }
-    } catch (err) {
-      setError(err.message || 'Failed to accept request.');
     }
-  };
+    return DEFAULT_CENTER;
+  }, [activeJobs]);
+
+  if (loading) return <div className="p-8 text-center text-earth-brown uppercase font-black text-xs tracking-widest">Scanning Active Missions...</div>;
 
   return (
-    <div className="space-y-3">
-      <div className="text-[10px] uppercase font-black tracking-widest text-earth-sub">
-        Operator Live + Farmer Request Pins ({requests.length})
-      </div>
-      {error ? <p className="text-[11px] font-bold text-red-600">{error}</p> : null}
-      <div className="h-[calc(100vh-10rem)] rounded-2xl overflow-hidden border border-earth-dark/10">
-        <MapContainer center={center} zoom={12} className="w-full h-full" scrollWheelZoom>
+    <div className="space-y-4">
+      <header className="flex justify-between items-end border-b border-earth-dark/10 pb-4">
+        <div>
+          <h1 className="text-xl font-black text-earth-brown uppercase italic tracking-tight">Fleet Command Center</h1>
+          <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest mt-1">
+            Monitoring {activeJobs.length} active service links
+          </p>
+        </div>
+        <div className="flex gap-2">
+            <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">
+               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div> Link Active
+            </span>
+        </div>
+      </header>
+
+      {error ? <p className="text-[11px] font-bold text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">{error}</p> : null}
+      
+      <div className="h-[calc(100vh-12rem)] rounded-[2rem] overflow-hidden border border-earth-dark/10 shadow-2xl relative">
+        <MapContainer center={center} zoom={11} className="w-full h-full" scrollWheelZoom>
           <TileLayer
             attribution="&copy; OpenFreeMap contributors"
             url={tileUrl}
@@ -101,46 +136,87 @@ export default function LiveTracking() {
                 if (tileUrl !== OSM_FALLBACK_TILES) {
                   setTileUrl(OSM_FALLBACK_TILES);
                   setError('');
-                  return;
                 }
-                setError('Map tiles failed to load.');
               },
             }}
           />
-          {operatorLocation ? (
-            <Marker
-              position={[operatorLocation.lat, operatorLocation.lng]}
-              icon={operatorIcon}
-            >
-              <Popup>
-                <div className="text-xs font-bold">Operator Live Location</div>
-              </Popup>
-            </Marker>
-          ) : null}
-          {requests.map((request) => (
-            <Marker
-              key={request.id}
-              position={[request.latitude, request.longitude]}
-              icon={requestPinIcon}
-            >
-              <Popup>
-                <div className="space-y-2 min-w-[200px]">
-                  <div className="text-xs font-bold">{request.farmer?.name || 'Farmer'}</div>
-                  <div className="text-[11px]">Service: {request.serviceType}</div>
-                  <div className="text-[11px]">Status: {request.status}</div>
-                  <Button
-                    type="button"
-                    className="w-full h-8 text-[10px] font-black uppercase tracking-widest"
-                    disabled={request.status === 'accepted'}
-                    onClick={() => acceptRequest(request.id)}
+
+          <FitBounds markers={allMarkers} />
+
+          {activeJobs.map((job) => {
+            const opLoc = operatorLocations[job.operatorId];
+            return (
+              <Fragment key={job.id}>
+                {/* Farmer Fixed Position */}
+                {Number.isFinite(job.farmerLatitude) && (
+                  <Marker
+                    position={[job.farmerLatitude, job.farmerLongitude]}
+                    icon={farmerPinIcon}
                   >
-                    {request.status === 'accepted' ? 'Accepted' : 'Accept'}
-                  </Button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+                    <Popup>
+                      <div className="p-2 space-y-1">
+                        <p className="text-[10px] font-black uppercase text-earth-mut">Client</p>
+                        <p className="text-xs font-bold text-earth-brown">{job.farmerName}</p>
+                        <p className="text-[10px] text-earth-sub">{job.location}</p>
+                        <div className="pt-2 border-t border-earth-dark/5 mt-2">
+                           <p className="text-[10px] font-bold text-earth-primary uppercase">Task: {job.serviceName}</p>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+
+                {/* Operator Live Position */}
+                {opLoc && (
+                  <Marker
+                    position={[opLoc.lat, opLoc.lng]}
+                    icon={operatorIcon}
+                  >
+                    <Popup>
+                      <div className="p-2 space-y-1">
+                        <p className="text-[10px] font-black uppercase text-earth-mut">Operator</p>
+                        <p className="text-xs font-bold text-earth-brown">{job.operatorName}</p>
+                        <p className="text-[10px] text-earth-sub">Unit: {job.tractorName} ({job.tractorModel})</p>
+                        <div className="mt-2 text-[9px] font-black text-emerald-600 uppercase tracking-widest">
+                           Live Telemetry Verified
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+
+                {/* Connection Line (Route) */}
+                {opLoc && Number.isFinite(job.farmerLatitude) && (
+                  <Polyline 
+                    positions={[
+                      [opLoc.lat, opLoc.lng],
+                      [job.farmerLatitude, job.farmerLongitude]
+                    ]}
+                    pathOptions={{ 
+                      color: '#dc2626', 
+                      weight: 2, 
+                      dashArray: '10, 10', 
+                      opacity: 0.6 
+                    }}
+                  />
+                )}
+              </Fragment>
+            );
+          })}
         </MapContainer>
+
+        {/* Legend Overlay */}
+        <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-earth-dark/10 shadow-xl space-y-3 min-w-[160px]">
+           <p className="text-[9px] font-black uppercase tracking-widest text-earth-mut border-b border-earth-dark/5 pb-2">Legend</p>
+           <div className="flex items-center gap-3">
+              <span className="text-lg">🚜</span>
+              <span className="text-[10px] font-bold text-earth-brown uppercase">Active Tractor</span>
+           </div>
+           <div className="flex items-center gap-3">
+              <span className="text-lg">📍</span>
+              <span className="text-[10px] font-bold text-earth-brown uppercase">Target Farm</span>
+           </div>
+        </div>
       </div>
     </div>
   );

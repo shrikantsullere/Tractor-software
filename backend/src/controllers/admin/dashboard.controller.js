@@ -1,5 +1,6 @@
 import * as adminService from '../../services/admin.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
+import { formatCurrency } from '../../utils/format.js';
 
 /**
  * Get aggregated dashboard metrics
@@ -7,7 +8,13 @@ import { sendSuccess, sendError } from '../../utils/response.js';
 export const getMetrics = async (req, res) => {
   try {
     const metrics = await adminService.getDashboardMetrics();
-    return sendSuccess(res, metrics, "Dashboard metrics retrieved successfully");
+    const responseData = {
+      ...metrics,
+      totalRevenueFormatted: formatCurrency(metrics.totalRevenue),
+      avgBookingValueFormatted: formatCurrency(metrics.avgBookingValue),
+      thisMonthEarningsFormatted: formatCurrency(metrics.thisMonthEarnings)
+    };
+    return sendSuccess(res, responseData, "Dashboard metrics retrieved successfully");
   } catch (error) {
     return sendError(res, error.message, 500);
   }
@@ -45,6 +52,18 @@ export const getFleet = async (req, res) => {
   try {
     const fleet = await adminService.getDashboardFleet();
     return sendSuccess(res, fleet, "Dashboard fleet retrieved successfully");
+  } catch (error) {
+    return sendError(res, error.message, 500);
+  }
+};
+
+/**
+ * Get all active jobs for admin tracking map
+ */
+export const getActiveJobs = async (req, res) => {
+  try {
+    const jobs = await adminService.getActiveJobs();
+    return sendSuccess(res, jobs, "Active jobs retrieved successfully");
   } catch (error) {
     return sendError(res, error.message, 500);
   }

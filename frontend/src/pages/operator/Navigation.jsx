@@ -40,10 +40,13 @@ export default function Navigation() {
     loadJobDestination();
   }, [location.state]);
 
+  const { bookingId } = location.state || {};
+
   return (
     <LiveTrackingMap
       role="operator"
       className="h-full lg:h-[calc(100vh-4rem)]"
+      bookingId={bookingId}
       initialDestination={destination}
       initialDestinationQuery={destinationQuery}
       destinationLabel={destinationLabel}

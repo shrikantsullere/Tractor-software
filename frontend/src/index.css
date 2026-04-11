@@ -23,6 +23,11 @@
 @layer base {
   body {
     @apply bg-earth-main text-earth-brown font-sans antialiased;
+    overscroll-behavior-y: none;
+  }
+  
+  html {
+    overscroll-behavior-y: none;
   }
 }
 

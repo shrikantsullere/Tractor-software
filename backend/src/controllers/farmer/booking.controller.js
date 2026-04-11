@@ -1,6 +1,7 @@
 import * as BookingService from '../../services/booking.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 import { bookingCreateSchema, pricePreviewSchema } from '../../schema/booking.schema.js';
+import { formatCurrency } from '../../utils/format.js';
 
 /**
  * Handle price preview request.
@@ -21,6 +22,8 @@ export const getPricePreview = async (req, res) => {
       distanceCharge: pricing.distanceCharge,
       fuelSurcharge: pricing.fuelSurcharge,
       totalPrice: pricing.totalPrice,
+      formattedTotalPrice: formatCurrency(pricing.totalPrice),
+      formattedDistanceCharge: pricing.distanceCharge > 0 ? formatCurrency(pricing.distanceCharge) : "Included",
       zoneName: pricing.zoneName,
       airDistance: pricing.airDistance,
       roadDistance: pricing.roadDistance
@@ -41,7 +44,14 @@ export const createBooking = async (req, res) => {
     const validatedData = bookingCreateSchema.parse(req.body);
     const farmerId = req.user.id;
     const booking = await BookingService.createBookingRequest(farmerId, validatedData);
-    return sendSuccess(res, booking, "Booking scheduled successfully", 201);
+    
+    // Add formatted total price for USSD/JSON consumers
+    const formattedBooking = {
+      ...booking,
+      formattedTotalPrice: formatCurrency(booking.totalPrice)
+    };
+    
+    return sendSuccess(res, formattedBooking, "Booking scheduled successfully", 201);
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, error.issues[0].message, 400, "VALIDATION_ERROR");
