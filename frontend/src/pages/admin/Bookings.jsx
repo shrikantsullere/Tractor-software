@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, Search, Filter, MoreVertical, FileText, Clock, Tractor as TractorIcon, CheckCircle2, ChevronDown, Trash2, CheckCircle, X, MapPin, Navigation, ArrowDown, Info } from 'lucide-react';
+import { Eye, Search, Filter, MoreVertical, FileText, Clock, Tractor as TractorIcon, CheckCircle2, ChevronDown, Trash2, CheckCircle, X, MapPin, Navigation, ArrowDown, Info, Calendar } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -141,15 +141,18 @@ export default function Bookings() {
   };
 
   return (
-    <div className="space-y-6 pb-24 lg:pb-8">
-      {/* Desktop Wrapper Card */}
-      <Card className="hidden md:block shadow-2xl border-earth-dark/15/50 bg-earth-card-alt rounded-[2rem] overflow-hidden">
-        <div className="p-8 border-b border-earth-dark/15/50 bg-earth-card/50 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown uppercase italic">Operations Control</h2>
-            <p className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] mt-2">Active Service Node Registry</p>
-          </div>
-          <div className="flex items-center gap-3">
+    <div className="space-y-8 pb-24 lg:pb-8 animate-in fade-in duration-500">
+      
+      {/* Header & Controls */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-earth-dark/10 pb-8">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown uppercase italic leading-none font-outfit">Operations Control</h2>
+          <p className="text-[10px] tracking-[0.3em] font-black uppercase text-earth-mut flex items-center gap-2 mt-2">
+            <Calendar size={12} className="text-earth-primary" /> Active Service Node Registry
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={18} />
               <Input 
@@ -192,15 +195,18 @@ export default function Bookings() {
              <Button 
                onClick={handleExport} 
                disabled={isExporting}
-               className="shrink-0 bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest h-12 px-6 rounded-xl shadow-lg border-none transition-all"
+               className="h-12 px-8 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-accent/20 border-none transition-all active:scale-[0.98]"
              >
                {isExporting ? <span className="animate-pulse">Exporting...</span> : <><FileText size={18} className="mr-2" /> Export</>}
              </Button>
            </div>
          </div>
  
-         <div className="overflow-x-auto text-left">
-           <table className="w-full text-sm whitespace-nowrap">
+         {/* Bookings List Card */}
+         <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl w-full max-w-full overflow-hidden">
+           <CardContent className="p-0">
+             <div className="w-full max-w-full overflow-x-auto text-left custom-scrollbar">
+           <table className="w-full text-sm whitespace-nowrap min-w-[1000px]">
              <thead className="bg-earth-dark text-earth-main uppercase font-black text-[10px] tracking-widest border-b border-earth-dark/10">
                <tr>
                  <th className="px-8 py-6 w-24 text-earth-main">Node ID</th>
@@ -300,6 +306,7 @@ export default function Bookings() {
             </tbody>
           </table>
         </div>
+        </CardContent>
         
         <div className="p-6 border-t border-earth-dark/15/50 bg-earth-card/50 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-earth-mut">
           <span>{totalCount} Nodes Synchronized | Page {pagination.currentPage} of {pagination.totalPages}</span>
@@ -478,21 +485,22 @@ export default function Bookings() {
       {createPortal(
         <AnimatePresence>
           {isViewModalOpen && selectedBooking && (
-            <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6" key="admin-booking-modal-portal">
-              {/* Backdrop Lock with separate dark overlay */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsViewModalOpen(false)}
-                className="fixed inset-0 bg-earth-main/80 backdrop-blur-sm"
-              />
+            <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide" key="admin-booking-modal-portal">
+              <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+                {/* Backdrop Lock with separate dark overlay */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl"
+                />
               
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="relative w-full max-w-xl bg-white border border-earth-dark/15 rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden z-10 max-h-[90vh]"
+                className="relative text-left w-full max-w-[500px] md:max-w-xl bg-white border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden z-10 max-h-[85vh] sm:max-h-[90vh] my-auto"
               >
                 {/* Modal Header - Operational Context */}
                 <div className="p-5 md:p-6 border-b border-earth-dark/10 flex items-center justify-between bg-earth-main/10 shrink-0">
@@ -510,46 +518,21 @@ export default function Bookings() {
 
                 {/* Modal Content - Scroll-Free Optimization */}
                 <div className="p-5 md:p-6 space-y-5 text-left overflow-y-auto">
-                  {/* 1. Service Route Visualization Context - Compact */}
+                  {/* 1. Location Details */}
                   <div className="space-y-3">
                     <h4 className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em] px-1 flex items-center gap-2">
-                      <Navigation size={12} className="text-earth-primary" />
-                      Service Route Visualization
+                      <MapPin size={12} className="text-earth-primary" />
+                      Location Details
                     </h4>
-                    <div className="relative pl-10 space-y-4 py-1">
-                        {/* Vertical Line */}
-                        <div className="absolute left-[19px] top-3 bottom-0 w-0.5 border-l border-dashed border-earth-dark/20" />
-                        
-                        {/* From: Hub */}
-                        <div className="relative">
-                          <div className="absolute -left-[30px] top-0 w-5 h-5 rounded-full bg-white border-2 border-earth-primary flex items-center justify-center z-10">
-                            <div className="w-1.5 h-1.5 rounded-full bg-earth-primary" />
-                          </div>
-                          <div>
-                            <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Origin Point (Hub)</p>
-                            <p className="text-xs font-black text-earth-brown truncate">{selectedBooking.hubName || "TractorLink Main Hub"}</p>
-                          </div>
-                        </div>
-
-                        {/* Distance Indicator Overlay */}
-                        <div className="relative py-1">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-earth-main border border-earth-dark/10 rounded-full text-[9px] font-black text-earth-primary uppercase tracking-widest">
-                              <ArrowDown size={10} />
-                              {selectedBooking.roadDistance || selectedBooking.distanceKm || 0} KM Road Distance
-                          </div>
-                        </div>
-
-                        {/* To: Farmer */}
-                        <div className="relative">
-                          <div className="absolute -left-[30px] top-0 w-5 h-5 rounded-full bg-earth-primary flex items-center justify-center z-10 shadow-lg shadow-earth-primary/30">
-                            <MapPin size={10} className="text-earth-brown" />
-                          </div>
-                          <div>
-                            <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Destination Point (Farmer)</p>
-                            <p className="text-xs font-black text-earth-brown truncate">{selectedBooking.location || "Farmer Site Location"}</p>
-                            <p className="text-[9px] font-bold text-earth-mut mt-0.5 uppercase tracking-tighter italic">Zone: {selectedBooking.zoneName || "Calculated Range"}</p>
-                          </div>
-                        </div>
+                    <div className="p-4 bg-earth-main/5 border border-earth-dark/10 rounded-[1.5rem] flex items-center justify-between">
+                      <div className="min-w-0 flex-1 pr-4">
+                        <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Destination Site</p>
+                        <p className="text-sm font-black text-earth-brown truncate">{selectedBooking.location || "Farmer Site Location"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Road Distance</p>
+                        <span className="text-sm font-black text-earth-primary italic">{selectedBooking.roadDistance || selectedBooking.distanceKm || 0} KM</span>
+                      </div>
                     </div>
                   </div>
 
@@ -624,6 +607,7 @@ export default function Bookings() {
                   </Button>
                 </div>
               </motion.div>
+            </div>
             </div>
           )}
         </AnimatePresence>,

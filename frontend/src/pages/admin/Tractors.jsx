@@ -170,8 +170,7 @@ export default function Tractors() {
          ))}
       </div>
 
-      {/* Tractors List */}
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl overflow-hidden">
+      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl w-full max-w-full overflow-hidden">
         <CardHeader className="p-6 border-b border-earth-dark/10 flex flex-row items-center justify-between bg-earth-card/50">
           <div>
             <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Fleet Registry</CardTitle>
@@ -182,8 +181,8 @@ export default function Tractors() {
           </button>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="w-full max-w-full overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-earth-dark text-earth-main">
                 <tr>
                   <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Unit Details</th>
@@ -344,13 +343,13 @@ export default function Tractors() {
 
       {/* Add Tractor Modal */}
       {showAddModal && createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-hidden">
-           <div 
-             className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl animate-in fade-in duration-300"
-             onClick={closeModal}
-           />
-           <div className="fixed inset-0 overflow-y-auto flex items-start md:items-center justify-center p-4 py-12 md:py-20" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-              <Card className="relative z-10 w-full max-w-md bg-earth-card border-earth-dark/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rounded-2xl md:rounded-[2.5rem] overflow-hidden border-t-8 border-t-accent animate-in zoom-in-95 duration-300 my-auto">
+        <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+           <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+              <div 
+                className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl animate-in fade-in duration-300"
+                onClick={closeModal}
+              />
+              <Card className="text-left relative z-10 w-full max-w-md bg-earth-card border-earth-dark/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rounded-2xl md:rounded-[2.5rem] overflow-hidden border-t-8 border-t-accent animate-in zoom-in-95 duration-300">
                  <CardHeader className="p-8 pb-4 border-b border-earth-dark/5">
                     <div className="w-16 h-16 rounded-3xl bg-accent/10 flex items-center justify-center text-accent mb-6 shadow-inner mx-auto">
                        {isEditing ? <Wrench size={32} className="stroke-[2.5]" /> : <Truck size={32} className="stroke-[2.5]" />}

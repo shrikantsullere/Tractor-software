@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { CreditCard, Wallet, Building, ArrowUpRight, Download, X, CheckCircle, Clock, ShieldCheck, ChevronRight, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -12,6 +13,7 @@ import useScrollLock from '../../hooks/useScrollLock';
 
 export default function Payments() {
   const { fetchBookings } = useBookings();
+  const location = useLocation();
   const [pendingData, setPendingData] = useState({ bookings: [], totalOutstanding: 0 });
   const [isLoading, setIsLoading] = useState(true);
   
@@ -38,7 +40,23 @@ export default function Payments() {
 
   useEffect(() => {
     fetchPending();
-  }, []);
+
+    // Check for pre-fill query parameters
+    const params = new URLSearchParams(location.search);
+    const prefillId = params.get('prefillId');
+    const prefillAmount = params.get('prefillAmount');
+    const serviceType = params.get('serviceType');
+
+    if (prefillId && prefillAmount) {
+      setPaymentPortal({
+        open: true,
+        type: serviceType ? `Payment for ${serviceType}` : 'Initial Payment',
+        amount: parseFloat(prefillAmount),
+        targetId: parseInt(prefillId)
+      });
+      setPaymentStep('method');
+    }
+  }, [location.search]);
 
   const handlePayFull = () => {
     setPaymentPortal({ open: true, type: 'Full Settlement', amount: pendingData.totalOutstanding, targetId: 'ALL' });
@@ -220,9 +238,10 @@ export default function Payments() {
       {/* Transaction Detail Modal - Scaled Down */}
       <AnimatePresence>
         {selectedTx && (
-          <div className="fixed inset-0 z-[100000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedTx(null)} className="absolute inset-0 bg-earth-dark/95 backdrop-blur-xl" />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 my-auto">
+          <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+            <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedTx(null)} className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" />
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative text-left z-10 bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl">
               <div className="p-6 border-b border-earth-dark/10 bg-earth-card/30 flex justify-between items-center">
                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-earth-brown">
@@ -252,22 +271,24 @@ export default function Payments() {
                  </div>
               </div>
             </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Payment Portal - Compact */}
+      {/* Detailed Action Modal */}
       <AnimatePresence>
         {paymentPortal.open && (
-          <div className="fixed inset-0 z-[110000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-earth-dark/90 backdrop-blur-3xl" />
-            
-            <motion.div 
-               initial={{ y: 10, opacity: 0 }} 
-               animate={{ y: 0, opacity: 1 }} 
-               exit={{ y: 10, opacity: 0 }}
-               className="bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 border-t-2 border-t-accent my-auto"
-            >
+          <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+            <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" />
+              
+              <motion.div 
+                 initial={{ y: 10, opacity: 0 }} 
+                 animate={{ y: 0, opacity: 1 }} 
+                 exit={{ y: 10, opacity: 0 }}
+                 className="relative text-left z-10 bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl border-t-2 border-t-accent"
+              >
               {paymentStep === 'method' && (
                 <div className="p-7 space-y-6">
                   <div className="flex justify-between items-start">
@@ -326,6 +347,7 @@ export default function Payments() {
                 </div>
               )}
             </motion.div>
+           </div>
           </div>
         )}
       </AnimatePresence>

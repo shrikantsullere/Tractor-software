@@ -115,7 +115,7 @@ export default function Operators() {
       </div>
 
       {/* Operators Table */}
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-[2rem] overflow-hidden">
+      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-[2rem] w-full max-w-full overflow-hidden">
         <CardHeader className="p-8 border-b border-earth-dark/10 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic">Certified Operators</CardTitle>
@@ -126,8 +126,8 @@ export default function Operators() {
           </button>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-shadow-sm">
+          <div className="w-full max-w-full overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[800px] text-shadow-sm">
               <thead className="bg-earth-dark text-earth-main">
                 <tr>
                   <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Personnel Entity</th>
@@ -211,20 +211,20 @@ export default function Operators() {
 
       {/* Recruit Operator Modal */}
       {isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-hidden">
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl"
-            onClick={() => setIsModalOpen(false)}
-          />
-          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+        <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl"
+              onClick={() => setIsModalOpen(false)}
+            />
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              className="relative z-10 w-full max-w-md bg-white rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden border border-earth-dark/10"
+              className="relative text-left z-10 w-full max-w-[420px] bg-white rounded-2xl md:rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden border border-earth-dark/10"
             >
-              <div className="bg-earth-dark p-8 text-earth-main flex justify-between items-center relative overflow-hidden">
+              <div className="bg-earth-dark p-6 md:p-8 text-earth-main flex justify-between items-center relative overflow-hidden">
                  <div className="absolute top-0 right-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-earth-primary via-transparent to-transparent pointer-events-none"></div>
                  <div className="relative z-10">
                    <h3 className="text-xl font-black uppercase italic tracking-tight">Personnel Recruitment</h3>
@@ -235,7 +235,7 @@ export default function Operators() {
                  </button>
               </div>
               
-              <form onSubmit={handleCreateOperator} className="p-8 space-y-6">
+              <form onSubmit={handleCreateOperator} className="p-6 md:p-8 space-y-5 md:space-y-6">
                  {formError && (
                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center">
                       {formError}

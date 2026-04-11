@@ -317,21 +317,22 @@ export default function History() {
       {/* Detailed Modal - Compact & Premium */}
       <AnimatePresence>
         {selectedBooking && (
-          <div className="fixed inset-0 z-[99999] flex items-start md:items-center justify-center p-4 md:p-6 bg-earth-main/80 backdrop-blur-sm overflow-y-auto py-12 md:py-20">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedBooking(null)}
-              className="fixed inset-0 "
-            />
-            
-            <motion.div
-              layoutId={selectedBooking.id}
-              className="bg-white border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] shadow-[0_25px_80px_rgba(0,0,0,0.15)] relative z-10 overflow-hidden flex flex-col my-auto"
-            >
+          <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+            <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedBooking(null)}
+                className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl"
+              />
+              
+              <motion.div
+                layoutId={selectedBooking.id}
+                className="text-left bg-white border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] my-auto"
+              >
               {/* Modal Header - Fully synchronized with Admin */}
-              <div className="p-6 border-b border-earth-dark/10 flex items-center justify-between bg-earth-main/20 relative">
+              <div className="p-5 md:p-6 border-b border-earth-dark/10 flex items-center justify-between bg-earth-main/20 relative shrink-0">
                 <div>
                   <h3 className="text-xl font-black text-earth-brown uppercase italic tracking-tight">Booking Context</h3>
                   <p className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em] mt-1">Registry Node: # {selectedBooking.id} • {selectedBooking.landSize} Ha</p>
@@ -345,28 +346,22 @@ export default function History() {
                 </button>
               </div>
 
-              {/* Modal Content - Compact & No Scroll */}
-              <div className="p-6 overflow-y-auto custom-scrollbar space-y-6 text-left">
-                {/* 1. Service Route Visualization Context */}
-                <div className="space-y-4">
-                   <h4 className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] px-1 flex items-center gap-2">
-                     <Navigation size={12} className="text-earth-primary" />
-                     Service Route Visualization
-                   </h4>
-                   <div className="bg-earth-card-alt/30 border border-earth-dark/10 p-4 rounded-[1.5rem] relative overflow-hidden group">
-                    <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-earth-primary/10 border border-earth-primary/20 flex items-center justify-center text-earth-primary shrink-0">
-                        <MapPin size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1.5">Site Location & Distance</p>
-                        <p className="text-sm font-black text-earth-brown truncate">{selectedBooking.location || "Your Site Location"}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="px-2 py-0.5 bg-earth-primary text-earth-brown rounded-md text-[8px] font-black uppercase tracking-widest">
-                            {selectedBooking.roadDistance || selectedBooking.distanceKm || 0} KM AWAY
-                          </span>
-                        </div>
-                      </div>
+              {/* Modal Content - Compact & Responsive Scroll */}
+              <div className="p-5 md:p-6 overflow-y-auto custom-scrollbar space-y-5 md:space-y-6 text-left">
+                {/* 1. Location Details */}
+                <div className="space-y-3">
+                  <h4 className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+                    <MapPin size={12} className="text-earth-primary" />
+                    Location Details
+                  </h4>
+                  <div className="p-4 bg-earth-main/5 border border-earth-dark/10 rounded-[1.5rem] flex items-center justify-between">
+                    <div className="min-w-0 flex-1 pr-4">
+                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Destination Site</p>
+                      <p className="text-sm font-black text-earth-brown truncate">{selectedBooking.location || "Your Site Location"}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest leading-none mb-1">Road Distance</p>
+                      <span className="text-sm font-black text-earth-primary italic">{selectedBooking.roadDistance || selectedBooking.distanceKm || 0} KM</span>
                     </div>
                   </div>
                 </div>
@@ -414,7 +409,7 @@ export default function History() {
               </div>
 
               {/* Modal Footer - Matched to Admin Footer */}
-              <div className="px-6 py-4 border-t border-earth-dark/10 bg-earth-main/40 flex justify-end gap-3">
+              <div className="px-5 md:px-6 py-4 border-t border-earth-dark/10 bg-earth-main/40 flex justify-end gap-3 shrink-0">
                 <Button 
                    onClick={() => handleDownloadInvoice(selectedBooking)}
                    disabled={isDownloading}
@@ -431,6 +426,7 @@ export default function History() {
                 </Button>
               </div>
             </motion.div>
+          </div>
           </div>
         )}
       </AnimatePresence>

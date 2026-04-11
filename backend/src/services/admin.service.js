@@ -363,51 +363,7 @@ export const getAllPayments = async (query = {}) => {
  * Creates a payment and marks booking as paid in a transaction.
  */
 export const settleBooking = async (bookingId, method = 'cash') => {
-  const bId = parseInt(bookingId);
-  console.log(`[AdminService] Attempting settlement for booking #${bId}`);
-
-  return await prisma.$transaction(async (tx) => {
-    // 1. Fetch booking with current payments
-    const booking = await tx.booking.findUnique({
-      where: { id: bId },
-      include: { payments: true }
-    });
-
-    if (!booking) throw new Error('Booking not found');
-    
-    // 2. Calculate remaining balance
-    const totalPaid = booking.payments.reduce((sum, p) => sum + p.amount, 0);
-    const remaining = booking.totalPrice - totalPaid;
-
-    if (remaining <= 0) {
-      throw new Error('Already Paid: This booking has no outstanding balance.');
-    }
-
-    console.log(`[AdminService] Booking #${bId} | Total: ${booking.totalPrice} | Paid: ${totalPaid} | Settling: ${remaining}`);
-
-    // 3. Create full settlement payment record
-    const payment = await tx.payment.create({
-      data: {
-        bookingId: bId,
-        amount: remaining,
-        method: method,
-        reference: 'manual',
-        status: 'full'
-      }
-    });
-
-    // 4. Update ONLY the paymentStatus — the work lifecycle status (COMPLETED) is preserved
-    const updatedBooking = await tx.booking.update({
-      where: { id: bId },
-      data: { paymentStatus: 'PAID' }
-    });
-
-    return {
-      success: true,
-      payment,
-      booking: updatedBooking
-    };
-  });
+  throw new Error('Manual settlement is disabled for security. All payments must be processed digitally by the farmer.');
 };
 
 /**

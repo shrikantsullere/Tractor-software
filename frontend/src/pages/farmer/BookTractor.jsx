@@ -28,7 +28,7 @@ export default function BookTractor() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [bookingStep, setBookingStep] = useState(1); // 1: Details, 2: Payment
-  const [selectedPaymentOption, setSelectedPaymentOption] = useState('later');
+  const [selectedPaymentOption, setSelectedPaymentOption] = useState('full');
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
   const [priceDetails, setPriceDetails] = useState({
@@ -133,8 +133,12 @@ export default function BookTractor() {
       
       if (result.success) {
         addBooking(result.data);
-        setConfirmedBooking(result.data);
-        setIsConfirmed(true);
+        const bookingId = result.data.id;
+        const prefillAmt = selectedPaymentOption === 'full' ? totalCost : totalCost * 0.5;
+        
+        // Redirect to payments with pre-fill instructions
+        navigate(`/farmer/payments?prefillId=${bookingId}&prefillAmount=${prefillAmt.toFixed(2)}&serviceType=${encodeURIComponent(service)}`);
+        
         setLandSize('');
         setLocation('');
         setErrors({});
@@ -472,8 +476,10 @@ export default function BookTractor() {
       </div>
 
       {bookingStep === 2 && (
-        <div className="fixed inset-0 bg-earth-dark/95 z-[3000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
-          <div className="bg-earth-card border border-earth-dark/10 w-full max-w-[420px] p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-2xl relative space-y-6 md:space-y-8 animate-in fade-in zoom-in slide-in-from-bottom-10 duration-500 my-auto">
+        <div className="fixed inset-0 z-[3000] overflow-y-auto scrollbar-hide">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+            <div className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" onClick={() => setBookingStep(1)} />
+            <div className="relative text-left z-10 bg-earth-card border border-earth-dark/10 w-full max-w-[420px] p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-2xl space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-300">
             <button 
               onClick={() => setBookingStep(1)}
               className="absolute top-6 right-6 text-earth-mut hover:text-earth-brown transition-colors"
@@ -505,15 +511,6 @@ export default function BookTractor() {
                   icon: Clock,
                   color: 'text-blue-500',
                   bg: 'bg-blue-500/10'
-                },
-                { 
-                  id: 'later', 
-                  label: 'Pay Later (Cash)', 
-                  sub: `${formatCurrency(0)} Now`, 
-                  desc: 'Pay full amount at the Hub/On-site',
-                  icon: Info,
-                  color: 'text-earth-mut',
-                  bg: 'bg-earth-card-alt'
                 }
               ].map((opt) => (
                 <button
@@ -548,13 +545,16 @@ export default function BookTractor() {
               {isBooking ? <Loader2 size={24} className="animate-spin" /> : "Confirm Booking"} <ArrowRight size={20} />
             </Button>
           </div>
+          </div>
         </div>
       )}
 
       {/* Loading Overlay */}
       {isBooking && (
-        <div className="fixed inset-0 bg-earth-main/60 backdrop-blur-sm z-[1000] flex items-center justify-center">
-           <div className="bg-earth-card border border-earth-dark/10 p-10 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[4000] overflow-y-auto scrollbar-hide">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+            <div className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" />
+            <div className="relative z-10 bg-earth-card border border-earth-dark/10 p-8 md:p-10 rounded-[2.5rem] flex flex-col items-center gap-6 shadow-2xl animate-in fade-in zoom-in duration-300">
               <div className="relative">
                 <Loader2 size={60} className="text-earth-primary animate-spin" />
                 <Tractor size={24} className="absolute inset-0 m-auto text-earth-brown/40" />
@@ -564,6 +564,7 @@ export default function BookTractor() {
                 <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest">Registering your schedule</p>
               </div>
            </div>
+          </div>
         </div>
       )}
 

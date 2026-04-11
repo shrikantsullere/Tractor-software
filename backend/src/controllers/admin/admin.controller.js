@@ -12,7 +12,7 @@ export const getBookings = async (req, res) => {
     const result = await adminService.getAllBookings({ page, limit, status, search });
     
     // Add formatted amounts
-    result.bookings = result.bookings.map(b => ({
+    result.data = result.data.map(b => ({
       ...b,
       formatted_total_price: formatCurrency(b.totalPrice),
       formatted_base_price: formatCurrency(b.basePrice),

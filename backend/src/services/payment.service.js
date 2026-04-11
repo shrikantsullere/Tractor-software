@@ -80,22 +80,30 @@ export const processBookingPayment = async (farmerId, { bookingId, amount, metho
   }
 
   return await prisma.$transaction(async (tx) => {
-    // 1. Create a NEW payment record (never overwrite)
+    // 1. Create a NEW payment record
     const payment = await tx.payment.create({
       data: {
         bookingId: booking.id,
         amount: parseFloat(amount),
-        method: method || 'cash'
+        method: method || 'online' // Default to online
       }
     });
 
-    // 2. Check if this payment completes the booking (total_paid >= total_price)
+    // 2. Recalculate total paid to determine status
     const newPaidAmount = paidAmount + amount;
+    let newPaymentStatus = booking.paymentStatus;
+    
     if (newPaidAmount >= booking.finalPrice) {
-      console.log(`[PaymentService] Booking ${booking.id} fully paid. Updating paymentStatus to 'PAID'.`);
+      newPaymentStatus = 'PAID';
+    } else if (newPaidAmount >= (booking.finalPrice * 0.5)) {
+      newPaymentStatus = 'PARTIAL';
+    }
+
+    if (newPaymentStatus !== booking.paymentStatus) {
+      console.log(`[PaymentService] Updating booking ${booking.id} paymentStatus to ${newPaymentStatus}`);
       await tx.booking.update({
         where: { id: booking.id },
-        data: { paymentStatus: 'PAID' } // Preserve work status (COMPLETED) — only track payment
+        data: { paymentStatus: newPaymentStatus }
       });
     }
 
@@ -105,38 +113,10 @@ export const processBookingPayment = async (farmerId, { bookingId, amount, metho
 
 /**
  * Settle all outstanding dues for a farmer.
+ * (Disabled for manual cash settlement)
  */
 export const settleAllDues = async (farmerId) => {
-  const { bookings } = await getFarmerPendingBookings(farmerId);
-  const dues = bookings.filter(p => p.remainingAmount > 0);
-
-  if (dues.length === 0) return { message: 'No outstanding dues to settle' };
-
-  console.log(`[PaymentService] Settling all dues for farmer ${farmerId} | Count: ${dues.length}`);
-
-  return await prisma.$transaction(async (tx) => {
-    const payments = [];
-    for (const due of dues) {
-      const payment = await tx.payment.create({
-        data: {
-          bookingId: due.id,
-          amount: due.remainingAmount,
-          method: 'cash'
-        }
-      });
-      payments.push(payment);
-
-      await tx.booking.update({
-        where: { id: due.id },
-        data: { paymentStatus: 'PAID' } // Preserve work status — only update payment
-      });
-    }
-
-    return {
-      message: `${payments.length} bookings settled successfully`,
-      totalPaid: dues.reduce((sum, d) => sum + d.remainingAmount, 0)
-    };
-  });
+  throw new Error('Manual cash settlement is disabled. Payments must be processed individually via digital gateway.');
 };
 
 /**

@@ -110,20 +110,8 @@ export default function Payments() {
     }
   };
 
-  const handleMarkAsPaid = async (id) => {
-    try {
-      const result = await api.admin.settleBooking(id, { method: 'cash' });
-      if (result.success) {
-        fetchPayments(pagination.currentPage);
-        setConfirmSettleId(null);
-      }
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const isAnyModalOpen = !!(confirmSettleId || selectedBooking);
+  const isAnyModalOpen = !!selectedBooking;
 
   // Handle scroll lock when modal is open
   useEffect(() => {
@@ -140,56 +128,20 @@ export default function Payments() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       
-      {/* Settle Confirmation Modal */}
-      {confirmSettleId && createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-hidden">
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="fixed inset-0 bg-earth-main/60 backdrop-blur-xl"
-            onClick={() => setConfirmSettleId(null)}
-          />
-          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setConfirmSettleId(null)}>
-            <motion.div 
-               initial={{ scale: 0.95, opacity: 0 }} 
-               animate={{ scale: 1, opacity: 1 }}
-               className="relative z-10 w-full max-w-sm bg-earth-card border border-earth-dark/10 rounded-[2.5rem] shadow-2xl p-8 text-center space-y-6"
-            >
-               <div className="w-16 h-16 rounded-2xl bg-primary-500/10 text-primary-400 flex items-center justify-center mx-auto border border-primary-500/20">
-                  <CreditCard size={32} />
-               </div>
-               <div>
-                  <h4 className="text-xl font-black text-earth-brown uppercase italic">Settle Payment</h4>
-                  <p className="text-xs font-bold text-earth-mut mt-2 uppercase tracking-widest leading-relaxed">Are you sure you want to mark this booking as settled? This will record a manual payment.</p>
-               </div>
-               <div className="flex gap-3">
-                  <Button variant="ghost" onClick={() => setConfirmSettleId(null)} className="flex-1 h-12 rounded-2xl bg-earth-card-alt border-earth-dark/15 text-earth-sub font-black uppercase text-[10px] tracking-widest hover:text-earth-brown">
-                    Cancel
-                  </Button>
-                  <Button onClick={() => handleMarkAsPaid(confirmSettleId)} className="flex-1 h-12 rounded-2xl bg-accent text-white font-black uppercase text-[10px] tracking-widest hover:opacity-90 shadow-lg shadow-accent/20">
-                    Confirm
-                  </Button>
-               </div>
-            </motion.div>
-          </div>
-        </div>,
-        document.body
-      )}
-
       {/* Detail Modal Overlay */}
       {selectedBooking && createPortal(
-        <div className="fixed inset-0 z-[999] overflow-hidden">
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="fixed inset-0 bg-earth-main/60 backdrop-blur-xl" 
-            onClick={() => setSelectedBooking(null)}
-          />
-          <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4 sm:p-6" onClick={(e) => e.target === e.currentTarget && setSelectedBooking(null)}>
+        <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }}
-              className="relative z-10 w-full max-w-lg bg-earth-card border border-earth-dark/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] rounded-[2.5rem] overflow-hidden"
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" 
+              onClick={() => setSelectedBooking(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="relative text-left z-10 w-full max-w-xl bg-earth-card border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden"
             >
               <div className="p-6 md:p-8 border-b border-earth-dark/10 flex justify-between items-center bg-white/50">
                 <h3 className="text-xl md:text-2xl font-black text-earth-brown uppercase tracking-tight italic">Transaction Details</h3>
@@ -246,14 +198,9 @@ export default function Payments() {
                   </div>
                 </div>
 
-                {selectedBooking.type !== 'payment' && (
-                  <Button 
-                    onClick={() => { setConfirmSettleId(selectedBooking.bookingId); setSelectedBooking(null); }}
-                    className="w-full h-14 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-accent/20"
-                  >
-                    Confirm Settlement
-                  </Button>
-                )}
+                <div className="p-4 bg-earth-card-alt border border-earth-dark/10 rounded-xl">
+                   <p className="text-[9px] font-bold text-earth-mut uppercase tracking-widest text-center">This transaction is managed via secure digital gateway.</p>
+                </div>
               </CardContent>
             </motion.div>
           </div>
@@ -406,15 +353,6 @@ export default function Payments() {
                       </td>
                       <td className="px-6 py-3 text-right">
                         <div className="flex justify-end gap-1.5 transition-all">
-                          {p.type === 'due' && (
-                            <Button 
-                              size="sm"
-                              onClick={() => setConfirmSettleId(p.bookingId)}
-                              className="h-8 px-3 rounded-lg bg-accent hover:opacity-90 text-white font-black text-[9px] uppercase tracking-widest"
-                            >
-                              Settle
-                            </Button>
-                          )}
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -433,6 +371,7 @@ export default function Payments() {
                   </tr>
                 )}
               </tbody>
+
             </table>
           </div>
 

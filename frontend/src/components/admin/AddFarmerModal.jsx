@@ -53,12 +53,13 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
 
   // Render to document body to avoid stacking context issues with header
   return createPortal(
-    <div className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl z-[9999] flex items-start md:items-center justify-center p-4 overflow-y-auto scrollbar-hide py-12 md:py-20">
-      {/* Background click to close */}
-      <div className="fixed inset-0" onClick={handleClose} />
-      
-      {/* Modal Container */}
-      <div className="relative bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] animate-in zoom-in duration-200 my-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto scrollbar-hide">
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+        {/* Background click to close */}
+        <div className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" onClick={handleClose} />
+        
+        {/* Modal Container */}
+        <div className="relative text-left bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] animate-in zoom-in duration-200">
         
         {/* Header */}
         <div className="bg-earth-card-alt/50 px-6 md:px-8 py-5 md:py-6 border-b border-earth-dark/10 flex justify-between items-center relative overflow-hidden">
@@ -171,6 +172,7 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
           )}
         </div>
       </div>
+    </div>
     </div>,
     document.body
   );

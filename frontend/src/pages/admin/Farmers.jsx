@@ -107,8 +107,7 @@ export default function Farmers() {
          ))}
       </div>
 
-      {/* Farmers List */}
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl overflow-hidden">
+      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl w-full max-w-full overflow-hidden">
         <CardHeader className="p-6 border-b border-earth-dark/10 flex flex-row items-center justify-between bg-earth-card/50">
           <div>
             <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Platform Users</CardTitle>
@@ -139,8 +138,8 @@ export default function Farmers() {
           ) : (
             <>
               {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
+              <div className="hidden md:block w-full max-w-full overflow-x-auto custom-scrollbar">
+                <table className="w-full min-w-[800px]">
                   <thead className="bg-earth-dark text-earth-main">
                     <tr>
                       <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">User Entity</th>
