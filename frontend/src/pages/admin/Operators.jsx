@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function Operators() {
   const navigate = useNavigate();
@@ -43,17 +44,8 @@ export default function Operators() {
     fetchOperators();
   }, []);
 
-  // Handle scroll lock when modal is open
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isModalOpen]);
+  // Lock background scroll when open
+  useScrollLock(isModalOpen);
 
   const handleCreateOperator = async (e) => {
     e.preventDefault();

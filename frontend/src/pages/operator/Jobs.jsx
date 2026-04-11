@@ -61,7 +61,7 @@ export default function Jobs() {
 
   const currentAction = activeJob ? getStatusAction(activeJob.status) : null;
 
-  const handleScanRadar = () => {
+  const handleStartJourney = () => {
     if (!activeJob) return;
 
     navigate('/operator/navigation', {
@@ -186,10 +186,10 @@ export default function Jobs() {
               {activeJob ? (
                 <button
                   type="button"
-                  onClick={handleScanRadar}
+                  onClick={handleStartJourney}
                   className="sm:w-[40%] bg-earth-card-alt text-earth-sub font-black px-4 py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-earth-card hover:text-earth-brown transition-all border border-earth-dark/15 uppercase tracking-widest text-xs"
                 >
-                  <Navigation2 size={16} /> Scan Radar
+                  <Navigation2 size={16} /> Start Journey
                 </button>
               ) : (
                 <button

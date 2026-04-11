@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
@@ -154,6 +155,7 @@ async function getRoute(start, end) {
 
 export default function LiveTrackingMap({
   role,
+  bookingId,
   roomId = TRACKING_ROOM,
   className = '',
   enableDestinationPick = false,
@@ -161,6 +163,7 @@ export default function LiveTrackingMap({
   initialDestinationQuery = '',
   destinationLabel = '',
 }) {
+  const { user } = useAuth();
   const [operatorLocation, setOperatorLocation] = useState(null);
   const [farmerLocation, setFarmerLocation] = useState(null);
   const [deviceLocation, setDeviceLocation] = useState(null);
@@ -186,9 +189,15 @@ export default function LiveTrackingMap({
   const lowAccuracyCooldownRef = useRef(0);
   const hasShownGpsIssueRef = useRef(false);
 
+  // Smart Centering: midpoint between operator and farmer
   const center = useMemo(() => {
+    if (operatorLocation && farmerLocation) {
+      return {
+        lat: (operatorLocation.lat + farmerLocation.lat) / 2,
+        lng: (operatorLocation.lng + farmerLocation.lng) / 2,
+      };
+    }
     if (role === 'operator') return operatorLocation || deviceLocation || farmerLocation || DEFAULT_CENTER;
-    if (role === 'admin') return farmerLocation || operatorLocation || deviceLocation || DEFAULT_CENTER;
     return farmerLocation || operatorLocation || deviceLocation || DEFAULT_CENTER;
   }, [farmerLocation, operatorLocation, deviceLocation, role]);
 
@@ -210,10 +219,11 @@ export default function LiveTrackingMap({
     if (!socketRef.current || !location) return;
     socketRef.current.emit('farmer:destination:update', {
       roomId,
+      bookingId,
       lat: location.lat,
       lng: location.lng,
     });
-  }, [roomId]);
+  }, [roomId, bookingId]);
 
   useEffect(() => {
     if (!initialDestination) return;
@@ -327,7 +337,7 @@ export default function LiveTrackingMap({
 
     socket.on('connect', () => {
       setStatusText('Connected. Waiting for live updates...');
-      socket.emit('tracking:join', { roomId, role });
+      socket.emit('tracking:join', { roomId, role, bookingId });
     });
 
     socket.on('tracking:state', (payload) => {
@@ -341,6 +351,8 @@ export default function LiveTrackingMap({
 
     socket.on('location:update', (payload) => {
       if (!payload) return;
+      // If we are admin or farmer, we might get updates for specific operators
+      // In private booking rooms, there is only one operator
       animateOperator({ lat: payload.lat, lng: payload.lng });
       setStatusText('Operator location updated in real time.');
     });
@@ -357,7 +369,7 @@ export default function LiveTrackingMap({
     return () => {
       socket.disconnect();
     };
-  }, [animateOperator, role, roomId]);
+  }, [animateOperator, role, roomId, bookingId]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -377,6 +389,8 @@ export default function LiveTrackingMap({
             emitGateRef.current = now;
             socketRef.current.emit('location:update', {
               roomId,
+              bookingId,
+              operatorId: user?.id,
               lat: point.lat,
               lng: point.lng,
               timestamp: now,
@@ -446,15 +460,16 @@ export default function LiveTrackingMap({
         clearTimeout(routeTimerRef.current);
       }
     };
-  }, [animateOperator, role, roomId]);
+  }, [animateOperator, role, roomId, bookingId]);
 
   useEffect(() => {
     if (!operatorLocation || !farmerLocation) return;
     scheduleRouteUpdate(operatorLocation, farmerLocation);
   }, [operatorLocation, farmerLocation, scheduleRouteUpdate]);
 
+  // CONTINUOUS DISTANCE UPDATE (Removed !isNavigating check)
   useEffect(() => {
-    if (!isNavigating || !operatorLocation || route.length < 2) return;
+    if (!operatorLocation || route.length < 2) return;
     const routePoints = route.map(([lat, lng]) => ({ lat, lng }));
     let nearestIdx = 0;
     let nearestDist = Infinity;
@@ -477,7 +492,7 @@ export default function LiveTrackingMap({
     }
     setRemainingDistanceKm(remain.toFixed(2));
     setRemainingEtaMin(String(Math.max(1, Math.ceil((remain / 35) * 60))));
-  }, [isNavigating, operatorLocation, route]);
+  }, [operatorLocation, route]);
 
   const handleDestinationPick = useCallback((location) => {
     setFarmerLocation(location);
@@ -492,12 +507,19 @@ export default function LiveTrackingMap({
       <div className="absolute z-[1000] top-4 left-4 bg-white/95 rounded-xl shadow-md border border-neutral-200 p-3 min-w-[220px]">
         <p className="text-xs font-bold text-neutral-800 uppercase">{role} tracking</p>
         <p className="text-[11px] text-neutral-600 mt-1">{statusText}</p>
-        <p className="text-[11px] mt-2 text-neutral-800">Distance: <span className="font-semibold">{distanceKm} km</span></p>
-        <p className="text-[11px] text-neutral-800">ETA: <span className="font-semibold">{etaMin} min</span></p>
+        
+        {/* Prioritize Remaining Distance */}
+        <p className="text-[11px] mt-2 text-neutral-800">
+          Distance to Destination: <span className="font-bold text-blue-600">{remainingDistanceKm !== '--' ? remainingDistanceKm : distanceKm} km</span>
+        </p>
+        <p className="text-[11px] text-neutral-800">
+          ETA: <span className="font-bold text-blue-600">{remainingEtaMin !== '--' ? remainingEtaMin : etaMin} min</span>
+        </p>
+
         <p className="text-[11px] text-neutral-800 mt-1">
-          Live: <span className="font-semibold">
-            {(operatorLocation || farmerLocation)
-              ? `${(operatorLocation || farmerLocation).lat.toFixed(5)}, ${(operatorLocation || farmerLocation).lng.toFixed(5)}`
+          Live: <span className="font-semibold text-[10px]">
+            {(operatorLocation)
+              ? `${operatorLocation.lat.toFixed(5)}, ${operatorLocation.lng.toFixed(5)}`
               : '--'}
           </span>
         </p>
@@ -511,7 +533,7 @@ export default function LiveTrackingMap({
         {instructions.length > 0 ? (
           <div className="mt-3 border-t border-neutral-200 pt-2">
             <p className="text-[10px] font-bold text-neutral-700 uppercase">Route Steps</p>
-            <ul className="mt-1 space-y-1">
+            <ul className="mt-1 space-y-1 max-h-[100px] overflow-y-auto">
               {instructions.map((step, idx) => (
                 <li key={`${step}-${idx}`} className="text-[10px] text-neutral-700 leading-tight">
                   {idx + 1}. {step}
@@ -526,7 +548,7 @@ export default function LiveTrackingMap({
             onClick={() => setIsNavigating((prev) => !prev)}
             className="mt-3 w-full h-8 rounded-lg bg-neutral-900 text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
           >
-            {isNavigating ? 'Navigation Running' : 'Start Navigation'}
+            {isNavigating ? 'Stop Navigation View' : 'Start Navigation View'}
           </button>
         ) : null}
         <button
@@ -536,17 +558,6 @@ export default function LiveTrackingMap({
         >
           {isAutoFollow ? 'Auto Follow: ON' : 'Auto Follow: OFF'}
         </button>
-        {isNavigating ? (
-          <div className="mt-2 border-t border-neutral-200 pt-2">
-            <p className="text-[10px] font-bold text-blue-700 uppercase">Navigation Active</p>
-            <p className="text-[10px] text-neutral-700 mt-1">
-              Remaining: <span className="font-semibold">{remainingDistanceKm} km</span> • ETA: <span className="font-semibold">{remainingEtaMin} min</span>
-            </p>
-            {instructions[0] ? (
-              <p className="text-[10px] text-neutral-800 mt-1"><span className="font-semibold">Next:</span> {instructions[0]}</p>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       <MapContainer center={center} zoom={13} className="w-full h-full" scrollWheelZoom>
@@ -566,7 +577,7 @@ export default function LiveTrackingMap({
           }}
         />
         <RecenterMap center={center} enabled={isAutoFollow} />
-        <FitRouteBounds route={route} enabled={isAutoFollow} />
+        <FitRouteBounds route={route} enabled={isAutoFollow && role !== 'operator'} />
         <MapInteractionWatcher onManualInteraction={() => setIsAutoFollow(false)} />
 
         <DestinationPicker enabled={enableDestinationPick} onPick={handleDestinationPick} />

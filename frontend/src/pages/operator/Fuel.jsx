@@ -4,6 +4,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { api } from '../../lib/api';
+import { formatCurrency } from '../../lib/format';
 
 export default function Fuel() {
   const [fuelLogs, setFuelLogs] = useState([]);
@@ -92,7 +93,7 @@ export default function Fuel() {
         </div>
         <div className="text-right bg-white px-5 py-2.5 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.04)] group transition-all">
            <p className="text-[9px] text-earth-mut font-black uppercase tracking-widest mb-1 leading-none">Total Resource Cost</p>
-           <p className="text-xl font-black text-earth-primary tracking-tighter">₦{summary.total_cost.toLocaleString()}</p>
+           <p className="text-xl font-black text-earth-primary tracking-tighter">{formatCurrency(summary.total_cost)}</p>
         </div>
       </header>
 
@@ -227,7 +228,7 @@ export default function Fuel() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-black text-earth-brown text-lg tracking-tighter uppercase leading-none">₦{log.cost.toLocaleString()}</p>
+                  <p className="font-black text-earth-brown text-lg tracking-tighter uppercase leading-none">{formatCurrency(log.cost)}</p>
                   <p className="text-[8px] uppercase font-black tracking-widest text-earth-mut mt-2 max-w-[150px] truncate bg-earth-card/50 px-2 py-1 rounded inline-block">{log.station}</p>
                 </div>
               </div>

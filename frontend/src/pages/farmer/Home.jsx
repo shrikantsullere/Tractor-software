@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
 import RequestLocationMap from '../../components/map/RequestLocationMap';
+import { formatCurrency } from '../../lib/format';
 
 export default function Home() {
   const [dashboardData, setDashboardData] = useState({ name: '', location: '', active_jobs: 0, total_bookings: 0, total_paid: 0 });
@@ -49,7 +50,7 @@ export default function Home() {
   }, []);
 
   const stats = [
-    { label: 'Total Paid', value: `₦${dashboardData.total_paid.toLocaleString()}`, icon: Wallet, color: 'text-earth-green', bg: 'bg-earth-primary/10' },
+    { label: 'Total Paid', value: formatCurrency(dashboardData.total_paid), icon: Wallet, color: 'text-earth-green', bg: 'bg-earth-primary/10' },
     { label: 'Active Jobs', value: dashboardData.active_jobs.toString(), icon: Zap, color: 'text-earth-primary', bg: 'bg-earth-primary/10' },
     { label: 'Total Bookings', value: dashboardData.total_bookings.toString(), icon: History, color: 'text-blue-400', bg: 'bg-blue-500/10' },
   ];

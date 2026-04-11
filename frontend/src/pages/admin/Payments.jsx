@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useBookings } from '../../context/BookingContext';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import { formatCurrency } from '../../lib/format';
 
 export default function Payments() {
   const [revenueData, setRevenueData] = useState({ totalRevenue: 0, payments: [] });
@@ -87,7 +88,7 @@ export default function Payments() {
         p.booking?.service?.name || 'N/A',
         new Date(p.createdAt).toLocaleDateString(),
         p.type.toUpperCase(),
-        `Naira ${p.amount.toLocaleString()}`
+        formatCurrency(p.amount)
       ]);
 
       // 3. Table
@@ -204,9 +205,9 @@ export default function Payments() {
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Total Invoice</p>
-                    <p className="text-xl md:text-2xl font-black text-earth-brown italic leading-none">₦{(selectedBooking.totalAmount || 0).toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-earth-green tracking-widest mt-1">Paid: ₦{(selectedBooking.paidAmount || 0).toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-red-500 tracking-widest">Rem: ₦{(selectedBooking.remainingAmount || 0).toLocaleString()}</p>
+                    <p className="text-xl md:text-2xl font-black text-earth-brown italic leading-none">{formatCurrency(selectedBooking.totalAmount || 0)}</p>
+                    <p className="text-[10px] font-bold text-earth-green tracking-widest mt-1">Paid: {formatCurrency(selectedBooking.paidAmount || 0)}</p>
+                    <p className="text-[10px] font-bold text-red-500 tracking-widest">Rem: {formatCurrency(selectedBooking.remainingAmount || 0)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Farmer</p>
@@ -311,7 +312,7 @@ export default function Payments() {
                 <CardContent className="p-5 flex justify-between items-center">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-earth-green mb-2">Total Revenue Confirmed</p>
-                    <h3 className="text-2xl font-black text-earth-brown italic">₦{totalRev.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-earth-brown italic">{formatCurrency(totalRev)}</h3>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-400 flex items-center justify-center border border-primary-500/20">
                     <CheckCircle size={18} />
@@ -323,7 +324,7 @@ export default function Payments() {
                 <CardContent className="p-5 flex justify-between items-center">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-earth-primary mb-2">Pending Escrow</p>
-                    <h3 className="text-2xl font-black text-earth-brown italic">₦{pendRev.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-earth-brown italic">{formatCurrency(pendRev)}</h3>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center border border-accent/20">
                     <Clock size={18} />
@@ -384,10 +385,10 @@ export default function Payments() {
                         <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">#{p.bookingId}</p>
                       </td>
                       <td className="px-6 py-3">
-                        <p className="font-black text-earth-brown text-base tracking-tight leading-tight">₦{(p.totalAmount || 0).toLocaleString()}</p>
+                        <p className="font-black text-earth-brown text-base tracking-tight leading-tight">{formatCurrency(p.totalAmount || 0)}</p>
                         <div className="flex gap-2 mt-1">
-                          <span className="text-[10px] text-earth-green/80 font-black tracking-widest uppercase">Paid: ₦{(p.paidAmount || 0).toLocaleString()}</span>
-                          <span className="text-[10px] text-red-400 font-black tracking-widest uppercase border-l border-earth-dark/20 pl-2">Rem: ₦{(p.remainingAmount || 0).toLocaleString()}</span>
+                          <span className="text-[10px] text-earth-green/80 font-black tracking-widest uppercase">Paid: {formatCurrency(p.paidAmount || 0)}</span>
+                          <span className="text-[10px] text-red-400 font-black tracking-widest uppercase border-l border-earth-dark/20 pl-2">Rem: {formatCurrency(p.remainingAmount || 0)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-3">
@@ -487,8 +488,8 @@ export default function Payments() {
                       <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-1.5 italic">#{p.bookingId}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-black text-earth-brown leading-none tracking-tighter">₦{(p.totalAmount || 0).toLocaleString()}</p>
-                      <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-1.5 leading-none">Rem: ₦{(p.remainingAmount || 0).toLocaleString()}</p>
+                      <p className="text-xl font-black text-earth-brown leading-none tracking-tighter">{formatCurrency(p.totalAmount || 0)}</p>
+                      <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-1.5 leading-none">Rem: {formatCurrency(p.remainingAmount || 0)}</p>
                     </div>
                   </div>
                 </CardContent>

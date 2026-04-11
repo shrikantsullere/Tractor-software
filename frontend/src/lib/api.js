@@ -130,6 +130,9 @@ export const api = {
     getDashboardFleet: async () => {
       return await fetchAPI('/admin/dashboard/fleet');
     },
+    getActiveJobs: async () => {
+      return await fetchAPI('/admin/dashboard/active-jobs');
+    },
     listBookings: async (params = {}) => {
       const query = new URLSearchParams(params).toString();
       return await fetchAPI(`/admin/bookings?${query}`);

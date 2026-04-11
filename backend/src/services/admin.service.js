@@ -560,6 +560,42 @@ export const getDashboardRevenue = async (timeframe = 'daily') => {
   };
 };
 /**
+ * Get all active jobs (ASSIGNED or IN_PROGRESS) for admin tracking map.
+ * Returns farmer coordinates, operator info, and tractor info.
+ */
+export const getActiveJobs = async () => {
+  const jobs = await prisma.booking.findMany({
+    where: {
+      status: { in: ['ASSIGNED', 'IN_PROGRESS'] }
+    },
+    include: {
+      farmer: { select: { id: true, name: true, phone: true } },
+      operator: { select: { id: true, name: true, phone: true } },
+      service: { select: { name: true } },
+      tractor: { select: { id: true, name: true, model: true } }
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
+
+  return jobs.map(j => ({
+    id: j.id,
+    status: j.status,
+    farmerName: j.farmer?.name || 'Unknown',
+    farmerLatitude: j.farmerLatitude,
+    farmerLongitude: j.farmerLongitude,
+    location: j.location,
+    operatorId: j.operator?.id,
+    operatorName: j.operator?.name || 'Unassigned',
+    tractorId: j.tractor?.id,
+    tractorName: j.tractor?.name || '',
+    tractorModel: j.tractor?.model || '',
+    serviceName: j.service?.name || '',
+    landSize: j.landSize,
+    scheduledAt: j.scheduledAt
+  }));
+};
+
+/**
  * Get fleet monitoring status for dashboard
  */
 export const getDashboardFleet = async () => {

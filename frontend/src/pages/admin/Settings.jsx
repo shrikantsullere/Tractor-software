@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+import { formatCurrency } from '../../lib/format';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
 import { api } from '../../lib/api';
@@ -96,7 +97,7 @@ export default function Settings() {
     if (activeTab === 'fuel') {
       const price = parseFloat(localFuel.dieselPrice);
       if (isNaN(price) || price <= 0 || price > 5000) {
-        setFuelError("Diesel price must be greater than 0 and ≤ 5000 ₦/L.");
+        setFuelError(`Diesel price must be greater than 0 and ≤ ${formatCurrency(5000)}/L.`);
         return;
       }
       setFuelError("");
@@ -451,11 +452,11 @@ export default function Settings() {
                     <div className="p-5 bg-earth-card/50 border border-earth-dark/15/50 rounded-2xl space-y-4">
                       <div className="flex justify-between items-center bg-earth-main p-3 rounded-xl border border-earth-dark/5">
                          <span className="text-[10px] font-black text-earth-sub uppercase tracking-widest">Fixed Baseline Price</span>
-                         <span className="text-xs font-black text-earth-mut">₦800 /L</span>
+                         <span className="text-xs font-black text-earth-mut">{formatCurrency(800)} /L</span>
                       </div>
                       <div className="flex justify-between items-center bg-earth-main p-3 rounded-xl border border-earth-dark/5">
                          <span className="text-[10px] font-black text-earth-sub uppercase tracking-widest">Fixed Base KM Rate</span>
-                         <span className="text-xs font-black text-earth-mut">₦750 /KM</span>
+                         <span className="text-xs font-black text-earth-mut">{formatCurrency(750)} /KM</span>
                       </div>
                     </div>
                   </div>
@@ -474,7 +475,7 @@ export default function Settings() {
                           <div>
                             <p className="text-[9px] uppercase font-black tracking-widest text-earth-sub mb-1">Adjusted Base Rate</p>
                             <p className="text-xl md:text-2xl font-black text-earth-primary flex flex-wrap items-baseline gap-1">
-                              ₦ {adjustedKmRate.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} 
+                              {formatCurrency(adjustedKmRate.toFixed(2))} 
                               <span className="text-[10px] md:text-sm font-bold text-earth-mut">/KM</span>
                             </p>
                           </div>
@@ -491,11 +492,11 @@ export default function Settings() {
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div className="p-4 bg-earth-card border border-earth-dark/10 rounded-2xl flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center opacity-60">
                        <span className="text-[10px] font-black text-earth-sub uppercase tracking-widest">Baseline Charge</span>
-                       <span className="text-sm font-black text-earth-mut">₦ {(750 * 22).toLocaleString()}</span>
+                       <span className="text-sm font-black text-earth-mut">{formatCurrency(750 * 22)}</span>
                      </div>
                      <div className="p-4 bg-earth-main border border-earth-primary/30 rounded-2xl flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center shadow-lg shadow-earth-primary/10">
                        <span className="text-[10px] font-black text-earth-primary uppercase tracking-widest">Adjusted Charge</span>
-                       <span className="text-sm font-black text-earth-brown">₦ {newSimulatedCharge.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                       <span className="text-sm font-black text-earth-brown">{formatCurrency(newSimulatedCharge.toFixed(2))}</span>
                      </div>
                    </div>
                 </div>
@@ -509,7 +510,7 @@ export default function Settings() {
                       </div>
                       <div className="text-center">
                         <h3 className="text-xl font-black text-earth-brown uppercase tracking-widest mb-2">Confirm Fuel Update</h3>
-                        <p className="text-sm font-bold text-earth-sub">Changing the diesel price will automatically adjust all future per-KM rates to ₦{adjustedKmRate.toFixed(2)}. Are you sure?</p>
+                        <p className="text-sm font-bold text-earth-sub">Changing the diesel price will automatically adjust all future per-KM rates to {formatCurrency(adjustedKmRate.toFixed(2))}. Are you sure?</p>
                       </div>
                       <div className="flex gap-3">
                         <Button variant="outline" onClick={() => setShowFuelConfirm(false)} className="flex-1 border-earth-dark/15 h-12 rounded-xl text-xs uppercase font-black text-earth-mut">Cancel</Button>
@@ -542,9 +543,9 @@ export default function Settings() {
                                       Modifier ID: #{log.adminId} &bull; {new Date(log.timestamp).toLocaleString()}
                                    </p>
                                    <div className="flex items-center gap-2">
-                                     <span className="text-xs font-black text-earth-sub line-through opacity-70">₦{log.oldPrice}</span>
+                                     <span className="text-xs font-black text-earth-sub line-through opacity-70">{formatCurrency(log.oldPrice)}</span>
                                      <span className="text-earth-primary">&rarr;</span>
-                                     <span className="text-sm font-black text-earth-brown">₦{log.newPrice}</span>
+                                     <span className="text-sm font-black text-earth-brown">{formatCurrency(log.newPrice)}</span>
                                    </div>
                                  </div>
                                </div>
@@ -636,7 +637,7 @@ export default function Settings() {
                         <p className="text-[8px] text-earth-mut font-bold uppercase pl-1">* Leave empty for "41+" (Open-ended)</p>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] uppercase font-black tracking-widest text-earth-sub pl-1">Surcharge (₦/ha)</label>
+                        <label className="text-[9px] uppercase font-black tracking-widest text-earth-sub pl-1">Surcharge Per Ha</label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-earth-primary font-black">₦</div>
                           <Input 
@@ -685,7 +686,7 @@ export default function Settings() {
                       <tr className="bg-earth-card/50 border-b border-earth-dark/10">
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">ID</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Distance Range</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Surcharge (₦/ha)</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Surcharge Per Ha</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Status</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] text-right">Actions</th>
                       </tr>
@@ -721,7 +722,7 @@ export default function Settings() {
                                       <Input type="number" value={newZoneMaxDistance} onChange={(e) => setNewZoneMaxDistance(e.target.value)} className="h-10 text-xs font-bold" />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-black text-earth-sub uppercase">₦ Per Ha</label>
+                                      <label className="text-[9px] font-black text-earth-sub uppercase">NGN Per Ha</label>
                                       <Input type="number" value={newZoneSurcharge} onChange={(e) => setNewZoneSurcharge(e.target.value)} className="h-10 text-xs font-bold" />
                                     </div>
                                     <div className="space-y-2">
@@ -756,7 +757,7 @@ export default function Settings() {
                                 </div>
                               </td>
                               <td className="px-6 py-5">
-                                <span className="text-sm font-black text-earth-primary">₦ {z.surchargePerHectare.toLocaleString()}</span>
+                                <span className="text-sm font-black text-earth-primary">{formatCurrency(z.surchargePerHectare)}</span>
                               </td>
                               <td className="px-6 py-5">
                                 <div className={cn(
@@ -832,7 +833,7 @@ export default function Settings() {
                                 </div>
                               </div>
                               <div className="space-y-2">
-                                <label className="text-[9px] uppercase font-black text-earth-sub">Surcharge (₦/ha)</label>
+                                <label className="text-[9px] uppercase font-black text-earth-sub">Surcharge Per Ha</label>
                                 <Input type="number" placeholder="0" value={newZoneSurcharge} onChange={(e) => setNewZoneSurcharge(e.target.value)} className="h-12 text-sm font-black" />
                               </div>
                               <div className="space-y-2">
@@ -881,7 +882,7 @@ export default function Settings() {
                           <div className="flex items-center justify-between pt-4 border-t border-earth-dark/10">
                              <div className="flex flex-col">
                                <span className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-1">Surcharge Tier</span>
-                               <span className="text-lg font-black text-earth-primary">₦ {z.surchargePerHectare.toLocaleString()} <span className="text-[10px] text-earth-mut">/HA</span></span>
+                               <span className="text-lg font-black text-earth-primary">{formatCurrency(z.surchargePerHectare)} <span className="text-[10px] text-earth-mut">/HA</span></span>
                              </div>
                              <div className="flex items-center gap-2">
                                <Button 
@@ -965,7 +966,7 @@ export default function Settings() {
                     <thead>
                       <tr className="bg-earth-card/50 border-b border-earth-dark/10">
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Service Name</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Rate (₦/ha)</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Rate Per Ha</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Effective Date</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] text-right">Actions</th>
                       </tr>
@@ -982,7 +983,7 @@ export default function Settings() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <label className="text-[9px] uppercase font-black text-earth-sub">Rate (₦/ha)</label>
+                                    <label className="text-[9px] uppercase font-black text-earth-sub">Rate Per Ha</label>
                                     <Input type="number" value={editServiceRate} onChange={(e) => setEditServiceRate(e.target.value)} className="h-10 text-xs font-black" />
                                   </div>
                                   <div className="space-y-2">
@@ -1016,7 +1017,7 @@ export default function Settings() {
                               </div>
                             </td>
                             <td className="px-6 py-5">
-                              <span className="text-sm font-black text-earth-primary">₦ {s.baseRatePerHectare.toLocaleString()}</span>
+                              <span className="text-sm font-black text-earth-primary">{formatCurrency(s.baseRatePerHectare)}</span>
                             </td>
                             <td className="px-6 py-5">
                               <span className="text-xs font-black text-earth-mut uppercase">
@@ -1054,7 +1055,7 @@ export default function Settings() {
                          </div>
                          <div className="space-y-4">
                             <div className="space-y-2">
-                              <label className="text-[9px] uppercase font-black text-earth-sub">Rate (₦/ha)</label>
+                              <label className="text-[9px] uppercase font-black text-earth-sub">Rate Per Ha</label>
                               <Input type="number" value={editServiceRate} onChange={(e) => setEditServiceRate(e.target.value)} className="h-12 text-sm font-black" />
                             </div>
                             <div className="space-y-2">
@@ -1100,7 +1101,7 @@ export default function Settings() {
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-earth-dark/5">
                           <div className="space-y-1">
                             <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest">Base Rate</p>
-                            <p className="text-sm font-black text-earth-primary">₦ {s.baseRatePerHectare.toLocaleString()} <span className="text-[10px] text-earth-mut">/HA</span></p>
+                            <p className="text-sm font-black text-earth-primary">{formatCurrency(s.baseRatePerHectare)} <span className="text-[10px] text-earth-mut">/HA</span></p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest">Effective On</p>

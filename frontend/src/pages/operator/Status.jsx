@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { api } from '../../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function Status() {
   const [activeJob, setActiveJob] = useState(null);
@@ -13,6 +15,9 @@ export default function Status() {
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [activeDialog, setActiveDialog] = useState(null); // 'comm' | 'sos' | 'summary'
   const [loading, setLoading] = useState(true);
+
+  // Lock background scroll when mission dialog is active
+  useScrollLock(activeDialog);
 
   // Status mapping backend <-> frontend button labels.
   // Note: We removed the artificial 'Arrived' step to strictly match FLOW.md
@@ -228,12 +233,11 @@ export default function Status() {
       </div>
 
       {/* Simplified Modal System */}
-      <AnimatePresence>
-        {activeDialog && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      {activeDialog && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-start md:items-center justify-center p-4 overflow-y-auto py-12 md:py-20">
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveDialog(null)} className="absolute inset-0 bg-earth-main/90 backdrop-blur-md" />
              
-             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-earth-main border border-earth-dark/10 w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl relative z-10">
+             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-earth-main border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] shadow-2xl relative z-10 my-auto">
                 <div className="p-6 border-b border-earth-dark/10 flex justify-between items-center bg-earth-card/10">
                    <h3 className="font-black text-base text-earth-brown uppercase italic tracking-tight">System Notification</h3>
                    <button onClick={() => setActiveDialog(null)} className="text-earth-mut hover:text-earth-brown transition-colors">
@@ -296,8 +300,7 @@ export default function Status() {
                 </div>
              </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        , document.body)}
 
     </div>
   );

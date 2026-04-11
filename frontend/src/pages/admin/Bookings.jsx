@@ -10,6 +10,7 @@ import { useBookings } from '../../context/BookingContext';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api';
+import { formatCurrency } from '../../lib/format';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -100,9 +101,9 @@ export default function Bookings() {
         `#${String(b.id).toUpperCase()}`,
         b.farmer?.name || 'Unknown',
         b.service?.name?.toUpperCase() || 'N/A',
-        `${b.landSize} Ha`,
+        b.landSize + ' Ha',
         b.status.toUpperCase(),
-        `Naira ${b.totalPrice?.toLocaleString()}`
+        formatCurrency(b.totalPrice)
       ]);
 
       // 3. Table Generation
@@ -260,7 +261,7 @@ export default function Bookings() {
                         
                         return (
                           <>
-                            <p className="font-black text-earth-brown text-lg tracking-tighter">₦{booking.totalPrice.toLocaleString()}</p>
+                            <p className="font-black text-earth-brown text-lg tracking-tighter">{formatCurrency(booking.totalPrice)}</p>
                             <div className="flex flex-col gap-0.5 mt-1">
                               <div className="flex items-center gap-1.5">
                                  {pStatus === 'PAID' ? <CheckCircle2 size={10} className="text-earth-green" /> : <Clock size={10} className="text-earth-primary" />}
@@ -270,7 +271,7 @@ export default function Bookings() {
                                  )}>{pStatus}</span>
                               </div>
                               {balance > 0 && paidAmt > 0 && (
-                                <p className="text-[8px] font-bold text-red-400 uppercase tracking-tighter">Rem: ₦{balance.toLocaleString()}</p>
+                                <p className="text-[8px] font-bold text-red-400 uppercase tracking-tighter">Rem: {formatCurrency(balance)}</p>
                               )}
                             </div>
                           </>
@@ -414,7 +415,7 @@ export default function Bookings() {
                   </div>
                   <div className="p-3 bg-earth-card/40 rounded-[1.2rem] border border-earth-dark/5 shadow-inner">
                     <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-1 opacity-60">Revenue</p>
-                    <p className="text-xs font-black text-earth-brown leading-none">₦{booking.totalPrice?.toLocaleString()}</p>
+                    <p className="text-xs font-black text-earth-brown leading-none">{formatCurrency(booking.totalPrice)}</p>
                     {(() => {
                       const paidAmt = booking.payments?.reduce((s, p) => s + p.amount, 0) || 0;
                       const pStatus = booking.paymentStatus || (booking.status === 'paid' ? 'PAID' : 'PENDING');
@@ -579,16 +580,16 @@ export default function Bookings() {
                     <div className="p-4 bg-white border border-earth-dark/10 rounded-[1.5rem] shadow-inner space-y-2">
                         <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
                           <span>Work Rate</span>
-                          <span className="text-earth-brown">₦{selectedBooking.basePrice?.toLocaleString()}</span>
+                          <span className="text-earth-brown">{formatCurrency(selectedBooking.basePrice || 0)}</span>
                         </div>
                         <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
                           <span>Logistics</span>
-                          <span className="text-earth-brown">₦{selectedBooking.distanceCharge?.toLocaleString()}</span>
+                          <span className="text-earth-brown">{formatCurrency(selectedBooking.distanceCharge || 0)}</span>
                         </div>
                         <div className="h-px bg-earth-dark/5 my-1" />
                         <div className="flex justify-between items-baseline pt-1">
                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-earth-primary italic">Total</span>
-                          <span className="text-lg font-black text-earth-brown tracking-tighter italic">₦{selectedBooking.totalPrice?.toLocaleString()}</span>
+                          <span className="text-lg font-black text-earth-brown tracking-tighter italic">{formatCurrency(selectedBooking.totalPrice || 0)}</span>
                         </div>
                     </div>
                   </div>

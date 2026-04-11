@@ -4,14 +4,36 @@ import {
   Activity, Clock, MapPin, CheckCircle, AlertCircle, Fuel, Battery,
   MoreVertical, ShieldCheck, Zap
 } from 'lucide-react';
+import { MapContainer, Marker, TileLayer, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { io } from 'socket.io-client';
+import 'leaflet/dist/leaflet.css';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
-import { MapContainer, TileLayer, useMap, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { formatCurrency } from '../../lib/format';
+
+const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
+
+function FitBounds({ markers }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!markers || markers.length === 0) return;
+    const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }, [markers, map]);
+  return null;
+}
+
+function DashboardMapAutoCenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.setView([center.lat, center.lng]);
+  }, [center, map]);
+  return null;
+}
 
 export default function Dashboard() {
   const [assignmentStatus, setAssignmentStatus] = useState(null);
@@ -21,13 +43,12 @@ export default function Dashboard() {
   const [assignmentQueue, setAssignmentQueue] = useState([]);
   const [revenueChart, setRevenueChart] = useState({ labels: [], data: [] });
   const [fleetData, setFleetData] = useState([]);
+  const [fleetLocations, setFleetLocations] = useState({}); // { operatorId: { lat, lng } }
   const [timeframe, setTimeframe] = useState('daily');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [deviceLocation, setDeviceLocation] = useState(null);
-
-  const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -49,6 +70,23 @@ export default function Dashboard() {
       }
     };
     fetchDashboardData();
+
+    // Socket for live fleet updates
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', { 
+      transports: ['websocket'] 
+    });
+    
+    socket.emit('tracking:join', { role: 'admin' });
+    
+    socket.on('location:update', (payload) => {
+      if (!payload || !payload.operatorId) return;
+      setFleetLocations(prev => ({
+        ...prev,
+        [payload.operatorId]: { lat: payload.lat, lng: payload.lng }
+      }));
+    });
+
+    return () => socket.disconnect();
   }, []);
 
   useEffect(() => {
@@ -75,7 +113,7 @@ export default function Dashboard() {
     { title: 'Active Jobs', value: metrics.active_jobs, icon: Activity, trend: '+2', up: true },
     { title: 'Pending Assignment', value: metrics.pending_assignment, icon: Clock, trend: `${metrics.pending_assignment} New`, up: true, highlight: metrics.pending_assignment > 0 },
     { title: 'Fleet Ready', value: metrics.fleet_ready, icon: Tractor, trend: 'Optimal', up: true },
-    { title: 'Total Revenue', value: `₦${metrics.total_revenue.toLocaleString()}`, icon: Banknote, trend: '+18%', up: true },
+    { title: 'Total Revenue', value: formatCurrency(metrics.total_revenue), icon: Banknote, trend: '+18%', up: true },
   ];
 
   const handleAssign = (bookingId) => {
@@ -83,6 +121,11 @@ export default function Dashboard() {
   };
 
   const chartMax = Math.max(...(revenueChart.data?.length ? revenueChart.data : [1000]));
+
+  const mapMarkers = [
+    ...(deviceLocation ? [deviceLocation] : []),
+    ...Object.values(fleetLocations)
+  ];
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10 relative">
@@ -192,7 +235,7 @@ export default function Dashboard() {
                             <div className="text-[10px] opacity-60 flex items-center gap-1"><MapPin size={10} /> {booking.location || 'Standard Zone'}</div>
                           </td>
                           <td className="px-6 py-4 text-xs font-black text-primary">
-                            ₦{booking.total_price.toLocaleString()}
+                            {formatCurrency(booking.total_price)}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -252,7 +295,7 @@ export default function Dashboard() {
                       {/* Tooltip on hover */}
                       <div className="absolute bottom-full mb-3 hidden group-hover:flex flex-col items-center z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                         <div className="bg-earth-dark text-white text-[10px] font-black px-3 py-2 rounded-xl shadow-2xl whitespace-nowrap">
-                          ₦{val.toLocaleString()}
+                          {formatCurrency(val)}
                         </div>
                         <div className="w-2 h-2 bg-earth-dark rotate-45 -mt-1"></div>
                       </div>
@@ -296,12 +339,21 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
-              {/* GPS UI remains */}
-              <div className="h-[200px] bg-earth-main relative overflow-hidden border-b border-earth-dark/10 shrink-0 group">
-                <MapContainer center={deviceLocation || DEFAULT_CENTER} zoom={13} className="w-full h-full z-10" zoomControl={false} scrollWheelZoom={false}>
-                  <TileLayer url="https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png" />
-                  <DashboardMapAutoCenter center={deviceLocation || DEFAULT_CENTER} />
-                  {deviceLocation && (
+              {/* Real GPS Map */}
+              <div className="h-[200px] bg-earth-main relative border-b border-earth-dark/10 shrink-0 group overflow-hidden">
+                <MapContainer 
+                  center={DEFAULT_CENTER} 
+                  zoom={10} 
+                  className="w-full h-full"
+                  zoomControl={false}
+                  attributionControl={false}
+                >
+                   <TileLayer url="https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png" />
+                   
+                   <DashboardMapAutoCenter center={deviceLocation} />
+                   <FitBounds markers={mapMarkers} />
+
+                   {deviceLocation && (
                     <Marker 
                       position={[deviceLocation.lat, deviceLocation.lng]} 
                       icon={L.divIcon({
@@ -310,9 +362,42 @@ export default function Dashboard() {
                         iconSize: [20, 20],
                         iconAnchor: [10, 10],
                       })} 
-                    />
-                  )}
+                    >
+                      <Popup><div className="text-[10px] font-black uppercase">You are here</div></Popup>
+                    </Marker>
+                   )}
+
+                   {fleetData.map((t) => {
+                     const loc = fleetLocations[t.operatorId];
+                     if (!loc) return null;
+                     
+                     const tractorIcon = L.divIcon({
+                        html: `<div style="background:${t.status?.toLowerCase() === 'available' ? '#16a34a' : '#ea7b08'};color:#fff;border-radius:8px;padding:4px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)">🚜</div>`,
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12],
+                     });
+
+                     return (
+                        <Marker key={t.id} position={[loc.lat, loc.lng]} icon={tractorIcon}>
+                           <Popup>
+                              <div className="text-[10px] font-bold">
+                                 {t.operator_name} - {t.tractor_model}
+                              </div>
+                           </Popup>
+                        </Marker>
+                     );
+                   })}
                 </MapContainer>
+                
+                {/* Fallback overlay if map is empty */}
+                {Object.keys(fleetLocations).length === 0 && !deviceLocation && (
+                   <div className="absolute inset-0 bg-earth-main/50 backdrop-blur-[2px] z-[500] flex items-center justify-center pointer-events-none">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-earth-mut flex items-center gap-2">
+                         <Activity size={12} className="text-earth-primary" /> Calibrating Satellite View...
+                      </p>
+                   </div>
+                )}
               </div>
 
               <div className="p-5 space-y-3 flex-1 overflow-y-auto bg-earth-card/30 scrollbar-hide max-h-[400px]">

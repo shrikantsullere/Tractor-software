@@ -235,9 +235,17 @@ export const getFarmerBookings = async (farmerId, query = {}) => {
 
   const where = { farmerId };
 
-  if (status !== 'all') {
-    // Normalize status: handle "in progress" -> "IN_PROGRESS" for Prisma enum matching
-    where.status = status.toUpperCase().replace(/\s+/g, '_');
+  if (status && status !== 'all') {
+    // Support multiple statuses if provided as a comma-separated string or array
+    const statusArray = Array.isArray(status) 
+      ? status 
+      : status.split(',').map(s => s.trim().toUpperCase().replace(/\s+/g, '_'));
+    
+    if (statusArray.length > 1) {
+      where.status = { in: statusArray };
+    } else if (statusArray.length === 1) {
+      where.status = statusArray[0];
+    }
   }
 
   if (search) {

@@ -8,6 +8,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useBookings } from '../../context/BookingContext';
 import { cn } from '../../lib/utils';
+import { formatCurrency } from '../../lib/format';
+import useScrollLock from '../../hooks/useScrollLock';
 
 export default function History() {
   const { bookings, loading, pagination, fetchBookings } = useBookings();
@@ -18,6 +20,9 @@ export default function History() {
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [ticketStatus, setTicketStatus] = useState(null);
+
+  // Lock background scroll when modal is open
+  useScrollLock(selectedBooking);
 
   // Server-side Sync Logic
   useEffect(() => {
@@ -58,7 +63,7 @@ export default function History() {
         new Date(b.createdAt).toLocaleDateString(),
         `${b.landSize} Ha`,
         b.status.toUpperCase(),
-        `₦${b.totalPrice.toLocaleString()}`
+        formatCurrency(b.totalPrice)
       ]);
 
       autoTable(doc, {
@@ -100,9 +105,9 @@ export default function History() {
         ["Area Coverage", `${booking.landSize} Hectares`],
         ["Origin (Hub)", booking.hubName || "Main Hub"],
         ["Route Distance", `${booking.roadDistance || booking.distanceKm || 0} KM`],
-        ["Base Work Rate", `Naira ${booking.basePrice.toLocaleString()}`],
-        ["Distance Surcharge", booking.distanceCharge > 0 ? `Naira ${booking.distanceCharge.toLocaleString()}` : "Included"],
-        ["TOTAL VALUATION", `Naira ${booking.totalPrice.toLocaleString()}`]
+        ["Base Work Rate", formatCurrency(booking.basePrice)],
+        ["Distance Surcharge", booking.distanceCharge > 0 ? formatCurrency(booking.distanceCharge) : "Included"],
+        ["TOTAL VALUATION", formatCurrency(booking.totalPrice)]
       ];
 
       autoTable(doc, {
@@ -259,9 +264,9 @@ export default function History() {
                                >
                                  {pStatus}
                                </Badge>
-                               <p className="font-black text-earth-brown text-lg leading-none tracking-tighter">₦{booking.totalPrice?.toLocaleString()}</p>
+                               <p className="font-black text-earth-brown text-lg leading-none tracking-tighter">{formatCurrency(booking.totalPrice)}</p>
                                {balance > 0 && paidAmount > 0 && (
-                                 <p className="text-[9px] font-bold text-red-500 mt-1 uppercase tracking-tighter">Balance: ₦{balance.toLocaleString()}</p>
+                                 <p className="text-[9px] font-bold text-red-500 mt-1 uppercase tracking-tighter">Balance: {formatCurrency(balance)}</p>
                                )}
                              </>
                            );
@@ -312,7 +317,7 @@ export default function History() {
       {/* Detailed Modal - Compact & Premium */}
       <AnimatePresence>
         {selectedBooking && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 md:p-6 bg-earth-main/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-start md:items-center justify-center p-4 md:p-6 bg-earth-main/80 backdrop-blur-sm overflow-y-auto py-12 md:py-20">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -323,7 +328,7 @@ export default function History() {
             
             <motion.div
               layoutId={selectedBooking.id}
-              className="bg-white border border-earth-dark/10 w-full max-w-md rounded-[2.5rem] shadow-[0_25px_80px_rgba(0,0,0,0.15)] relative z-10 overflow-hidden flex flex-col"
+              className="bg-white border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] shadow-[0_25px_80px_rgba(0,0,0,0.15)] relative z-10 overflow-hidden flex flex-col my-auto"
             >
               {/* Modal Header - Fully synchronized with Admin */}
               <div className="p-6 border-b border-earth-dark/10 flex items-center justify-between bg-earth-main/20 relative">
@@ -389,16 +394,16 @@ export default function History() {
                   <div className="bg-white border border-earth-dark/10 rounded-[1.5rem] p-4 space-y-2 shadow-inner">
                     <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
                       <span>Base Service Fee</span>
-                      <span className="text-earth-brown">₦{selectedBooking.basePrice?.toLocaleString()}</span>
+                      <span className="text-earth-brown">{formatCurrency(selectedBooking.basePrice)}</span>
                     </div>
                     <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
                       <span>Logistics Surcharge</span>
-                      <span className="text-earth-brown">₦{selectedBooking.distanceCharge?.toLocaleString()}</span>
+                      <span className="text-earth-brown">{formatCurrency(selectedBooking.distanceCharge)}</span>
                     </div>
                     <div className="h-px bg-earth-dark/5 my-1" />
                     <div className="flex justify-between items-center pt-1">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-earth-primary italic">Total Valuation</span>
-                      <span className="text-xl font-black text-earth-brown tracking-tighter italic">₦{selectedBooking.totalPrice?.toLocaleString()}</span>
+                      <span className="text-xl font-black text-earth-brown tracking-tighter italic">{formatCurrency(selectedBooking.totalPrice)}</span>
                     </div>
                   </div>
                 </div>

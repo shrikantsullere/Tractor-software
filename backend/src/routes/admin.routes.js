@@ -16,6 +16,7 @@ router.get('/dashboard/metrics', dashboardController.getMetrics);
 router.get('/dashboard/assignment-queue', dashboardController.getAssignmentQueue);
 router.get('/dashboard/revenue', dashboardController.getRevenue);
 router.get('/dashboard/fleet', dashboardController.getFleet);
+router.get('/dashboard/active-jobs', dashboardController.getActiveJobs);
 
 // Finance & Bookings
 router.get('/bookings', adminController.getBookings);
