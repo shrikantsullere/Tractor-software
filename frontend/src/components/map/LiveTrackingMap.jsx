@@ -163,6 +163,7 @@ export default function LiveTrackingMap({
 }) {
   const [operatorLocation, setOperatorLocation] = useState(null);
   const [farmerLocation, setFarmerLocation] = useState(null);
+  const [deviceLocation, setDeviceLocation] = useState(null);
   const [route, setRoute] = useState([]);
   const [distanceKm, setDistanceKm] = useState('--');
   const [etaMin, setEtaMin] = useState('--');
@@ -178,6 +179,7 @@ export default function LiveTrackingMap({
 
   const socketRef = useRef(null);
   const watchIdRef = useRef(null);
+  const deviceWatchIdRef = useRef(null);
   const emitGateRef = useRef(0);
   const routeTimerRef = useRef(null);
   const operatorAnimRef = useRef(null);
@@ -185,11 +187,24 @@ export default function LiveTrackingMap({
   const hasShownGpsIssueRef = useRef(false);
 
   const center = useMemo(() => {
-    if (role === 'operator' || role === 'admin') {
-      return operatorLocation || farmerLocation || DEFAULT_CENTER;
-    }
-    return farmerLocation || operatorLocation || DEFAULT_CENTER;
-  }, [farmerLocation, operatorLocation, role]);
+    if (role === 'operator') return operatorLocation || deviceLocation || farmerLocation || DEFAULT_CENTER;
+    if (role === 'admin') return farmerLocation || operatorLocation || deviceLocation || DEFAULT_CENTER;
+    return farmerLocation || operatorLocation || deviceLocation || DEFAULT_CENTER;
+  }, [farmerLocation, operatorLocation, deviceLocation, role]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    deviceWatchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setDeviceLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => console.warn('Device geolocation failed'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+    return () => {
+      if (deviceWatchIdRef.current) navigator.geolocation.clearWatch(deviceWatchIdRef.current);
+    };
+  }, []);
 
   const emitFarmerDestination = useCallback((location) => {
     if (!socketRef.current || !location) return;
@@ -555,6 +570,22 @@ export default function LiveTrackingMap({
         <MapInteractionWatcher onManualInteraction={() => setIsAutoFollow(false)} />
 
         <DestinationPicker enabled={enableDestinationPick} onPick={handleDestinationPick} />
+
+        {deviceLocation ? (
+          <Marker
+            position={[deviceLocation.lat, deviceLocation.lng]}
+            icon={L.divIcon({
+              html: '<div style="background:#2563eb;color:white;border-radius:9999px;padding:5px;width:12px;height:12px;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>',
+              className: '',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            })}
+          >
+            <Popup>
+              <div className="text-[10px] font-black uppercase">You are here</div>
+            </Popup>
+          </Marker>
+        ) : null}
 
         {operatorLocation ? (
           <Marker

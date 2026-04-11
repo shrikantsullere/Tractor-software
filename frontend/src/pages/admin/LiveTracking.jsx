@@ -30,6 +30,7 @@ export default function LiveTracking() {
   const [error, setError] = useState('');
   const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
   const [operatorLocation, setOperatorLocation] = useState(null);
+  const [deviceLocation, setDeviceLocation] = useState(null);
 
   useEffect(() => {
     const loadInitial = async () => {
@@ -43,6 +44,14 @@ export default function LiveTracking() {
       }
     };
     loadInitial();
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setDeviceLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }, () => {
+        console.warn('Geolocation failed or denied');
+      });
+    }
 
     const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
     socket.on('connect', () => {
@@ -70,9 +79,18 @@ export default function LiveTracking() {
 
   const center = useMemo(() => {
     const first = requests.find((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
-    if (!first) return DEFAULT_CENTER;
-    return { lat: first.latitude, lng: first.longitude };
-  }, [requests]);
+    if (first) return { lat: first.latitude, lng: first.longitude };
+    if (deviceLocation) return deviceLocation;
+    return DEFAULT_CENTER;
+  }, [requests, deviceLocation]);
+
+  function RecenterMap({ center }) {
+    const map = useMap();
+    useEffect(() => {
+      if (center) map.setView([center.lat, center.lng]);
+    }, [center]);
+    return null;
+  }
 
   const acceptRequest = async (id) => {
     try {
@@ -107,6 +125,22 @@ export default function LiveTracking() {
               },
             }}
           />
+          <RecenterMap center={center} />
+          {deviceLocation && (
+             <Marker
+                position={[deviceLocation.lat, deviceLocation.lng]}
+                icon={L.divIcon({
+                  html: '<div style="background:#2563eb;color:white;border-radius:9999px;padding:5px;width:12px;height:12px;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>',
+                  className: '',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10],
+                })}
+              >
+                <Popup>
+                  <div className="text-[10px] font-black uppercase">You are here</div>
+                </Popup>
+              </Marker>
+          )}
           {operatorLocation ? (
             <Marker
               position={[operatorLocation.lat, operatorLocation.lng]}

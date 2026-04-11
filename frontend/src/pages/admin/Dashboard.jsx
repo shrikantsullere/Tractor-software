@@ -9,6 +9,9 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import { MapContainer, TileLayer, useMap, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
 export default function Dashboard() {
   const [assignmentStatus, setAssignmentStatus] = useState(null);
@@ -22,6 +25,9 @@ export default function Dashboard() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const [deviceLocation, setDeviceLocation] = useState(null);
+
+  const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -46,6 +52,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setDeviceLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      });
+    }
     const fetchRevenueData = async () => {
       try {
         setIsChartLoading(true);
@@ -286,18 +297,22 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
               {/* GPS UI remains */}
-              <div className="h-[200px] bg-earth-main relative flex items-center justify-center border-b border-earth-dark/10 shrink-0 group">
-                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at center, #fbbf24 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-                 
-                 <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-earth-dark/10 rounded-full opacity-20 animate-spin-slow"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-earth-dark/10 rounded-full opacity-40"></div>
-                 </div>
-
-                 <p className="text-earth-mut font-black text-[10px] tracking-widest z-10 uppercase bg-earth-main px-4 py-1 border border-earth-dark/10 rounded-full">HQ Range: 50km</p>
-                 
-                 <div className="absolute top-1/4 left-1/3 w-3 h-3 bg-earth-primary rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)]"><div className="absolute inset-0 bg-earth-primary rounded-full animate-ping opacity-75"></div></div>
-                 <div className="absolute top-1/2 right-1/3 w-3 h-3 bg-earth-primary rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"><div className="absolute inset-0 bg-earth-primary rounded-full animate-ping opacity-75"></div></div>
+              <div className="h-[200px] bg-earth-main relative overflow-hidden border-b border-earth-dark/10 shrink-0 group">
+                <MapContainer center={deviceLocation || DEFAULT_CENTER} zoom={13} className="w-full h-full z-10" zoomControl={false} scrollWheelZoom={false}>
+                  <TileLayer url="https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png" />
+                  <DashboardMapAutoCenter center={deviceLocation || DEFAULT_CENTER} />
+                  {deviceLocation && (
+                    <Marker 
+                      position={[deviceLocation.lat, deviceLocation.lng]} 
+                      icon={L.divIcon({
+                        html: '<div style="background:#2563eb;color:white;border-radius:9999px;padding:5px;width:12px;height:12px;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>',
+                        className: '',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
+                      })} 
+                    />
+                  )}
+                </MapContainer>
               </div>
 
               <div className="p-5 space-y-3 flex-1 overflow-y-auto bg-earth-card/30 scrollbar-hide max-h-[400px]">
@@ -397,4 +412,12 @@ export default function Dashboard() {
       )}
     </div>
   );
+}
+
+function DashboardMapAutoCenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.setView([center.lat, center.lng]);
+  }, [center, map]);
+  return null;
 }
