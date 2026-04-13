@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
+import { api } from '../../lib/api';
+import { cn } from '../../lib/utils';
 import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 const TRACKING_ROOM = 'default-room';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+
+const getDistance = (p1, p2) => {
+  if (!p1 || !p2) return 0;
+  const R = 6371e3;
+  const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+  const dLng = (p2.lng - p1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 const OPENFREE_TILES = 'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png';
 const OSM_FALLBACK_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
@@ -49,7 +62,7 @@ function RecenterMap({ center, enabled }) {
   useEffect(() => {
     if (!enabled) return;
     if (!center) return;
-    map.setView([center.lat, center.lng], map.getZoom(), { animate: true });
+    map.setView(center, map.getZoom(), { animate: true });
   }, [center, enabled, map]);
   return null;
 }
@@ -133,24 +146,34 @@ function normalizeInstruction(step) {
 }
 
 async function getRoute(start, end) {
-  const routeUrl = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true`;
-  const response = await fetch(routeUrl);
-  if (!response.ok) {
-    throw new Error('Could not load route from OSRM.');
-  }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true`;
+    
+    const response = await fetch(routeUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) throw new Error('Route service busy');
+    const data = await response.json();
+    const route = data?.routes?.[0];
+    if (!route) throw new Error('No route available');
 
-  const data = await response.json();
-  const route = data?.routes?.[0];
-  if (!route) {
-    throw new Error('No route available for selected points.');
+    return {
+      distanceKm: (route.distance / 1000).toFixed(2),
+      etaMin: Math.ceil(route.duration / 60),
+      coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+      instructions: (route.legs?.[0]?.steps || []).map(normalizeInstruction).filter(Boolean).slice(0, 6),
+    };
+  } catch (err) {
+    const dist = haversineKm(start, end);
+    return {
+      distanceKm: dist.toFixed(2),
+      etaMin: Math.ceil((dist / 35) * 60),
+      coordinates: [[start.lat, start.lng], [end.lat, end.lng]],
+      instructions: ['Follow direct path to destination (Route service offline)'],
+    };
   }
-
-  return {
-    distanceKm: (route.distance / 1000).toFixed(2),
-    etaMin: Math.ceil(route.duration / 60),
-    coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-    instructions: (route.legs?.[0]?.steps || []).map(normalizeInstruction).filter(Boolean).slice(0, 6),
-  };
 }
 
 export default function LiveTrackingMap({
@@ -166,6 +189,7 @@ export default function LiveTrackingMap({
   const { user } = useAuth();
   const [operatorLocation, setOperatorLocation] = useState(null);
   const [farmerLocation, setFarmerLocation] = useState(null);
+  const [deviceLocation, setDeviceLocation] = useState(null);
   const [route, setRoute] = useState([]);
   const [distanceKm, setDistanceKm] = useState('--');
   const [etaMin, setEtaMin] = useState('--');
@@ -177,26 +201,50 @@ export default function LiveTrackingMap({
   const [remainingEtaMin, setRemainingEtaMin] = useState('--');
   const [statusText, setStatusText] = useState('Initializing map...');
   const [errorText, setErrorText] = useState('');
-  const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
+  const [tileUrl, setTileUrl] = useState(OSM_FALLBACK_TILES);
 
   const socketRef = useRef(null);
   const watchIdRef = useRef(null);
+  const deviceWatchIdRef = useRef(null);
   const emitGateRef = useRef(0);
+  const operatorLocationRef = useRef(null);
   const routeTimerRef = useRef(null);
   const operatorAnimRef = useRef(null);
   const lowAccuracyCooldownRef = useRef(0);
   const hasShownGpsIssueRef = useRef(false);
+  const lastRoutePointRef = useRef(null);
 
   // Smart Centering: midpoint between operator and farmer
   const center = useMemo(() => {
+    let point = DEFAULT_CENTER;
     if (operatorLocation && farmerLocation) {
-      return {
+      point = {
         lat: (operatorLocation.lat + farmerLocation.lat) / 2,
         lng: (operatorLocation.lng + farmerLocation.lng) / 2,
       };
+    } else {
+      point = (role === 'operator') 
+        ? (operatorLocation || deviceLocation || farmerLocation || DEFAULT_CENTER)
+        : (farmerLocation || operatorLocation || deviceLocation || DEFAULT_CENTER);
     }
-    return operatorLocation || farmerLocation || DEFAULT_CENTER;
-  }, [farmerLocation, operatorLocation]);
+    const res = [point.lat, point.lng];
+    if (!Number.isFinite(res[0]) || !Number.isFinite(res[1])) return [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
+    return res;
+  }, [farmerLocation, operatorLocation, deviceLocation, role]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    deviceWatchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setDeviceLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => console.warn('Device geolocation failed'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+    return () => {
+      if (deviceWatchIdRef.current) navigator.geolocation.clearWatch(deviceWatchIdRef.current);
+    };
+  }, []);
 
   const emitFarmerDestination = useCallback((location) => {
     if (!socketRef.current || !location) return;
@@ -260,7 +308,10 @@ export default function LiveTrackingMap({
 
   const animateOperator = useCallback((nextPoint) => {
     if (!nextPoint) return;
-    if (!operatorLocation) {
+    
+    // If it's the first point, just set it
+    if (!operatorLocationRef.current) {
+      operatorLocationRef.current = nextPoint;
       setOperatorLocation(nextPoint);
       return;
     }
@@ -269,7 +320,7 @@ export default function LiveTrackingMap({
       cancelAnimationFrame(operatorAnimRef.current);
     }
 
-    const start = operatorLocation;
+    const start = { ...operatorLocationRef.current };
     const startedAt = performance.now();
     const duration = 1200;
 
@@ -278,10 +329,13 @@ export default function LiveTrackingMap({
       const t = Math.min(elapsed / duration, 1);
       const eased = t * (2 - t);
 
-      setOperatorLocation({
+      const current = {
         lat: start.lat + (nextPoint.lat - start.lat) * eased,
         lng: start.lng + (nextPoint.lng - start.lng) * eased,
-      });
+      };
+
+      operatorLocationRef.current = current;
+      setOperatorLocation(current);
 
       if (t < 1) {
         operatorAnimRef.current = requestAnimationFrame(step);
@@ -289,7 +343,7 @@ export default function LiveTrackingMap({
     };
 
     operatorAnimRef.current = requestAnimationFrame(step);
-  }, [operatorLocation]);
+  }, []); // Remove operatorLocation dependency
 
   const scheduleRouteUpdate = useCallback((start, end) => {
     if (!start || !end) return;
@@ -304,10 +358,11 @@ export default function LiveTrackingMap({
         setDistanceKm(routeData.distanceKm);
         setEtaMin(routeData.etaMin);
         setInstructions(routeData.instructions || []);
+        lastRoutePointRef.current = start;
       } catch (error) {
         setErrorText(error.message || 'Unable to calculate route.');
       }
-    }, 1000);
+    }, 1500);
   }, []);
 
   useEffect(() => {
@@ -334,8 +389,6 @@ export default function LiveTrackingMap({
 
     socket.on('location:update', (payload) => {
       if (!payload) return;
-      // If we are admin or farmer, we might get updates for specific operators
-      // In private booking rooms, there is only one operator
       animateOperator({ lat: payload.lat, lng: payload.lng });
       setStatusText('Operator location updated in real time.');
     });
@@ -350,9 +403,27 @@ export default function LiveTrackingMap({
     });
 
     return () => {
-      socket.disconnect();
+      if (socket.connected) {
+        socket.disconnect();
+      } else {
+        socket.once('connect', () => socket.disconnect());
+      }
     };
   }, [animateOperator, role, roomId, bookingId]);
+
+  // Immediate route update on first valid points or significant movement
+  useEffect(() => {
+    if (!operatorLocation || !farmerLocation) return;
+    
+    const distSinceLast = lastRoutePointRef.current 
+      ? getDistance(operatorLocation, lastRoutePointRef.current) 
+      : Infinity;
+
+    // Trigger on first load or > 30m movement
+    if (route.length === 0 || distSinceLast > 30) {
+      scheduleRouteUpdate(operatorLocation, farmerLocation);
+    }
+  }, [operatorLocation, farmerLocation, route.length, scheduleRouteUpdate]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -380,77 +451,36 @@ export default function LiveTrackingMap({
             });
           }
         }
-
       },
       (error) => {
-        if (error.code === 1) {
-          setErrorText('Location permission denied. Enable browser location for live turn-by-turn guidance.');
-          return;
-        }
         if (error.code === 3) {
-          // Fallback to coarse location when high-accuracy GPS stalls.
           const now = Date.now();
           if (now - lowAccuracyCooldownRef.current > 12000 && navigator.geolocation) {
             lowAccuracyCooldownRef.current = now;
             navigator.geolocation.getCurrentPosition(
               (position) => {
-                const point = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-                };
+                const point = { lat: position.coords.latitude, lng: position.coords.longitude };
                 animateOperator(point);
-                setErrorText('');
-                setStatusText('Using fallback GPS accuracy. Navigation continues.');
-                hasShownGpsIssueRef.current = false;
               },
-              () => {
-                if (!operatorLocation && !hasShownGpsIssueRef.current) {
-                  setErrorText('Live GPS is unavailable right now. Set location permission to Always Allow for smoother tracking.');
-                  hasShownGpsIssueRef.current = true;
-                }
-              },
+              null,
               { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
             );
-            return;
           }
-          // Silence repeated timeout noise when last known location is already available.
-          if (!operatorLocation && !hasShownGpsIssueRef.current) {
-            setErrorText('Live GPS is unavailable right now. Set location permission to Always Allow for smoother tracking.');
-            hasShownGpsIssueRef.current = true;
-          }
-          return;
-        }
-        if (!operatorLocation && !hasShownGpsIssueRef.current) {
-          setErrorText('Live GPS is unstable on this device.');
-          hasShownGpsIssueRef.current = true;
         }
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 25000,
-        maximumAge: 12000,
-      }
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 12000 }
     );
 
     return () => {
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-      if (operatorAnimRef.current) {
-        cancelAnimationFrame(operatorAnimRef.current);
-      }
-      if (routeTimerRef.current) {
-        clearTimeout(routeTimerRef.current);
-      }
+      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
-  }, [animateOperator, role, roomId, bookingId]);
+  }, [animateOperator, role, roomId, bookingId, user?.id]);
 
   useEffect(() => {
     if (!operatorLocation || !farmerLocation) return;
     scheduleRouteUpdate(operatorLocation, farmerLocation);
   }, [operatorLocation, farmerLocation, scheduleRouteUpdate]);
 
-  // CONTINUOUS DISTANCE UPDATE (Removed !isNavigating check)
   useEffect(() => {
     if (!operatorLocation || route.length < 2) return;
     const routePoints = route.map(([lat, lng]) => ({ lat, lng }));
@@ -463,12 +493,8 @@ export default function LiveTrackingMap({
         nearestIdx = i;
       }
     }
-
     const nextPoint = routePoints[Math.min(nearestIdx + 1, routePoints.length - 1)];
-    if (nextPoint) {
-      setHeadingDeg(computeHeadingDeg(operatorLocation, nextPoint));
-    }
-
+    if (nextPoint) setHeadingDeg(computeHeadingDeg(operatorLocation, nextPoint));
     let remain = 0;
     for (let i = nearestIdx; i < routePoints.length - 1; i += 1) {
       remain += haversineKm(routePoints[i], routePoints[i + 1]);
@@ -480,108 +506,128 @@ export default function LiveTrackingMap({
   const handleDestinationPick = useCallback((location) => {
     setFarmerLocation(location);
     emitFarmerDestination(location);
-    setStatusText('Farmer destination updated.');
   }, [emitFarmerDestination]);
 
-  const geolocationUnavailable = !navigator.geolocation;
-
   return (
-    <div className={`relative w-full h-screen ${className}`}>
-      <div className="absolute z-[1000] top-4 left-4 bg-white/95 rounded-xl shadow-md border border-neutral-200 p-3 min-w-[220px]">
-        <p className="text-xs font-bold text-neutral-800 uppercase">{role} tracking</p>
-        <p className="text-[11px] text-neutral-600 mt-1">{statusText}</p>
-        
-        {/* Prioritize Remaining Distance */}
-        <p className="text-[11px] mt-2 text-neutral-800">
-          Distance to Destination: <span className="font-bold text-blue-600">{remainingDistanceKm !== '--' ? remainingDistanceKm : distanceKm} km</span>
-        </p>
-        <p className="text-[11px] text-neutral-800">
-          ETA: <span className="font-bold text-blue-600">{remainingEtaMin !== '--' ? remainingEtaMin : etaMin} min</span>
-        </p>
-
-        <p className="text-[11px] text-neutral-800 mt-1">
-          Live: <span className="font-semibold text-[10px]">
-            {(operatorLocation)
-              ? `${operatorLocation.lat.toFixed(5)}, ${operatorLocation.lng.toFixed(5)}`
-              : '--'}
-          </span>
-        </p>
-        {geolocationUnavailable ? (
-          <p className="text-[11px] text-red-600 mt-2">Geolocation is not supported in this browser.</p>
-        ) : null}
-        {tileUrl === OSM_FALLBACK_TILES ? (
-          <p className="text-[11px] text-neutral-500 mt-2">Map is running on backup tiles.</p>
-        ) : null}
-        {errorText ? <p className="text-[11px] text-red-600 mt-2">{errorText}</p> : null}
-        {instructions.length > 0 ? (
-          <div className="mt-3 border-t border-neutral-200 pt-2">
-            <p className="text-[10px] font-bold text-neutral-700 uppercase">Route Steps</p>
-            <ul className="mt-1 space-y-1 max-h-[100px] overflow-y-auto">
-              {instructions.map((step, idx) => (
-                <li key={`${step}-${idx}`} className="text-[10px] text-neutral-700 leading-tight">
-                  {idx + 1}. {step}
-                </li>
-              ))}
-            </ul>
+    <div 
+      className={cn("relative w-full flex flex-col overflow-hidden bg-neutral-100", className)}
+      style={{ minHeight: '600px', height: '100%' }}
+    >
+      <div className="absolute z-[1000] top-6 left-6 right-6 md:right-auto md:w-[280px] bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-neutral-200 p-3 transition-all">
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{role} mode</p>
+          <div className="flex gap-1.5 items-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+            <p className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">{statusText.split('.')[0]}</p>
           </div>
-        ) : null}
-        {role === 'operator' && route.length > 1 ? (
-          <button
-            type="button"
-            onClick={() => setIsNavigating((prev) => !prev)}
-            className="mt-3 w-full h-8 rounded-lg bg-neutral-900 text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
-          >
-            {isNavigating ? 'Stop Navigation View' : 'Start Navigation View'}
-          </button>
-        ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-neutral-50/50 p-2 rounded-lg border border-neutral-100">
+            <p className="text-[8px] font-bold text-neutral-400 uppercase">Dist</p>
+            <p className="text-sm font-black text-neutral-800">{remainingDistanceKm}<span className="text-[8px] ml-0.5 uppercase opacity-40">km</span></p>
+          </div>
+          <div className="bg-neutral-50/50 p-2 rounded-lg border border-neutral-100">
+            <p className="text-[8px] font-bold text-neutral-400 uppercase">ETA</p>
+            <p className="text-sm font-black text-neutral-800">{remainingEtaMin}<span className="text-[8px] ml-0.5 uppercase opacity-40">min</span></p>
+          </div>
+        </div>
+
+        {errorText && (
+          <div className="mb-3 p-1.5 bg-red-50/50 rounded-lg border border-red-100 flex items-center gap-2">
+            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+            <p className="text-[9px] font-bold text-red-600 uppercase leading-none">{errorText}</p>
+          </div>
+        )}
+
+        {instructions.length > 0 && (
+          <div className="space-y-2.5">
+            <div className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100">
+              <p className="text-[7px] font-bold uppercase opacity-70 tracking-widest text-center mb-0.5">Next Command</p>
+              <p className="text-[11px] font-black text-center leading-tight uppercase tracking-tight">{instructions[0]}</p>
+            </div>
+            
+            <div className="max-h-[100px] overflow-y-auto pr-1.5 scrollbar-hide">
+              <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 px-0.5">Upcoming</p>
+              <ul className="space-y-1.5">
+                {instructions.slice(1).map((step, idx) => (
+                  <li key={idx} className="flex items-start gap-2 group px-0.5">
+                    <span className="text-[9px] font-black text-neutral-300 mt-0.5">{idx + 2}</span>
+                    <p className="text-[10px] font-bold text-neutral-500 leading-tight group-hover:text-neutral-800 transition-colors uppercase tracking-tight">{step}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => setIsAutoFollow((prev) => !prev)}
-          className="mt-2 w-full h-8 rounded-lg border border-neutral-300 bg-white text-neutral-800 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+          className={cn(
+            "mt-3 w-full h-8 rounded-lg border text-[9px] font-black uppercase tracking-widest transition-all active:scale-95",
+            isAutoFollow 
+              ? "bg-neutral-900 text-white border-neutral-900 shadow-lg shadow-neutral-200"
+              : "bg-white text-neutral-800 border-neutral-200 hover:bg-neutral-50"
+          )}
         >
-          {isAutoFollow ? 'Auto Follow: ON' : 'Auto Follow: OFF'}
+          {isAutoFollow ? 'Lock On' : 'Unlock Map'}
         </button>
       </div>
 
-      <MapContainer center={center} zoom={13} className="w-full h-full" scrollWheelZoom>
-        <TileLayer
-          attribution='&copy; OpenFreeMap contributors'
-          url={tileUrl}
+      <MapContainer 
+        center={center} 
+        zoom={13} 
+        className="w-full flex-1"
+        style={{ height: '600px', minHeight: '600px' }}
+      >
+        <TileLayer 
+          url={tileUrl} 
           eventHandlers={{
             tileerror: () => {
+              // Only fallback once to avoid infinite update loops
               if (tileUrl !== OSM_FALLBACK_TILES) {
                 setTileUrl(OSM_FALLBACK_TILES);
-                setStatusText('Map loaded with backup tiles.');
-                setErrorText('');
-                return;
               }
-              setErrorText('Map tiles failed to load. Please check your internet connection.');
-            },
+            }
           }}
         />
         <RecenterMap center={center} enabled={isAutoFollow} />
-        <FitRouteBounds route={route} enabled={isAutoFollow && role !== 'operator'} />
+        <FitRouteBounds route={route} enabled={isAutoFollow} />
         <MapInteractionWatcher onManualInteraction={() => setIsAutoFollow(false)} />
-
         <DestinationPicker enabled={enableDestinationPick} onPick={handleDestinationPick} />
 
-        {operatorLocation ? (
+        {deviceLocation && (
+          <Marker position={[deviceLocation.lat, deviceLocation.lng]}>
+             <Popup>
+                <div className="text-[10px] font-black uppercase">You are here</div>
+             </Popup>
+          </Marker>
+        )}
+
+        {operatorLocation && (
           <Marker
             position={[operatorLocation.lat, operatorLocation.lng]}
             icon={isNavigating ? getNavigationArrowIcon(headingDeg) : tractorIcon}
           />
-        ) : null}
+        )}
 
-        {farmerLocation ? (
-          <Marker
-            position={[farmerLocation.lat, farmerLocation.lng]}
-            icon={farmerIcon}
-          />
-        ) : null}
+        {farmerLocation && (
+          <Marker position={[farmerLocation.lat, farmerLocation.lng]} icon={farmerIcon} />
+        )}
 
-        {route.length > 1 ? (
-          <Polyline positions={route} pathOptions={{ color: '#2563eb', weight: 5, opacity: 0.9 }} />
-        ) : null}
+        {route.length > 1 && (
+          <>
+            <Polyline 
+              positions={route} 
+              pathOptions={{ color: '#2563eb', weight: 8, opacity: 0.4 }} 
+            />
+            <Polyline 
+              positions={route} 
+              pathOptions={{ color: '#3b82f6', weight: 4, opacity: 1, lineJoin: 'round' }} 
+            />
+          </>
+        )}
       </MapContainer>
     </div>
   );

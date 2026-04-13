@@ -99,9 +99,13 @@ export default function BookTractor() {
         setFarmerLatitude(String(lat));
         setFarmerLongitude(String(lng));
         if (!location) {
-          setLocation(`Pinned (${lat}, ${lng})`);
+          setLocation(`Location Selected`);
         }
-        setErrors((prev) => ({ ...prev, location: false }));
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.location;
+          return newErrors;
+        });
         setIsLocating(false);
       },
       () => {
@@ -305,7 +309,13 @@ export default function BookTractor() {
                       value={landSize} 
                       onChange={(e) => {
                         setLandSize(e.target.value);
-                        if (errors.landSize) setErrors({...errors, landSize: false});
+                        if (errors.landSize) {
+                          setErrors(prev => {
+                            const newErr = { ...prev };
+                            delete newErr.landSize;
+                            return newErr;
+                          });
+                        }
                       }}
                       className={cn(
                         "h-12 bg-earth-card text-earth-brown font-bold rounded-xl transition-all",
@@ -330,7 +340,13 @@ export default function BookTractor() {
                       value={location}
                       onChange={(e) => {
                         setLocation(e.target.value);
-                        if (errors.location) setErrors({...errors, location: false});
+                        if (errors.location) {
+                          setErrors(prev => {
+                            const newErr = { ...prev };
+                            delete newErr.location;
+                            return newErr;
+                          });
+                        }
                       }}
                       className={cn(
                         "pl-10 h-12 bg-earth-card text-earth-brown font-bold rounded-xl transition-all",
@@ -366,46 +382,22 @@ export default function BookTractor() {
                       setFarmerLatitude(String(lat));
                       setFarmerLongitude(String(lng));
                       if (!location || source === 'gps') {
-                        setLocation(`Pinned (${lat}, ${lng})`);
+                        setLocation(`Location Selected`);
                       }
-                      setErrors((prev) => ({ ...prev, location: false }));
+                      setErrors((prev) => {
+                        const newErr = { ...prev };
+                        delete newErr.location;
+                        return newErr;
+                      });
                     }}
                   />
                   {selectedMapLocation ? (
-                    <p className="text-[10px] font-bold text-earth-green px-1">
-                      Pin: {selectedMapLocation.lat}, {selectedMapLocation.lng}
+                    <p className="text-[10px] font-black text-earth-green px-1 uppercase tracking-widest flex items-center gap-2">
+                      <CheckCircle size={12} /> Work Location Successfully Pinned
                     </p>
                   ) : (
-                    <p className="text-[10px] font-bold text-earth-mut px-1">No pin selected yet.</p>
+                    <p className="text-[10px] font-bold text-earth-mut px-1 uppercase tracking-widest">No pin selected yet.</p>
                   )}
-                </div>
-
-                <div className="space-y-2 text-left md:col-span-2">
-                  <div className="flex justify-between items-center px-1">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-earth-mut">Farmer Coordinates (Haversine)</label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <Input 
-                        type="number"
-                        step="any"
-                        placeholder="Latitude"
-                        value={farmerLatitude}
-                        onChange={(e) => setFarmerLatitude(e.target.value)}
-                        className="h-12 bg-earth-card text-earth-brown font-bold rounded-xl border border-earth-dark/15 focus:ring-earth-primary px-4"
-                      />
-                    </div>
-                    <div className="relative">
-                      <Input 
-                        type="number"
-                        step="any"
-                        placeholder="Longitude"
-                        value={farmerLongitude}
-                        onChange={(e) => setFarmerLongitude(e.target.value)}
-                        className="h-12 bg-earth-card text-earth-brown font-bold rounded-xl border border-earth-dark/15 focus:ring-earth-primary px-4"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             </CardContent>

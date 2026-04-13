@@ -119,14 +119,14 @@ export default function Tractors() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-earth-dark/10 pb-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6">
         <div>
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown mb-1 uppercase italic font-outfit">Fleet Management</h2>
-          <p className="text-[10px] tracking-[0.3em] font-black uppercase text-earth-mut flex items-center gap-2">
-            <Truck size={12} className="text-earth-primary" /> Centralized Resource Control
+          <p className="text-[9px] md:text-[10px] tracking-[0.2em] font-black uppercase text-earth-mut flex items-center gap-2">
+            <Truck size={12} className="text-earth-primary" /> Centralized Resource Control Registry
           </p>
         </div>
         
@@ -156,43 +156,43 @@ export default function Tractors() {
            { label: 'Active Service', value: tractors.filter(t => t.status === 'AVAILABLE' || t.status === 'IN_USE').length, icon: ShieldCheck, color: 'text-earth-green', bg: 'bg-earth-primary/10' },
            { label: 'Maintenance', value: tractors.filter(t => t.status === 'MAINTENANCE').length, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
          ].map((stat, i) => (
-           <Card key={i} className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl border-b-4 border-b-earth-primary/20">
-              <CardContent className="p-4 flex items-center justify-between">
+           <Card key={i} className="bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] border-none rounded-[2rem] overflow-hidden group hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all">
+              <CardContent className="p-6 flex items-center justify-between">
                  <div>
-                   <p className="text-[9px] font-black text-earth-mut uppercase tracking-[0.15em] mb-0.5 font-outfit">{stat.label}</p>
-                   <h3 className="text-2xl font-black text-earth-brown tracking-tighter">{stat.value.toString().padStart(2, '0')}</h3>
+                   <p className="text-[9px] font-black text-earth-mut uppercase tracking-[0.15em] mb-1.5 font-outfit">{stat.label}</p>
+                   <h3 className="text-3xl font-black text-earth-brown tracking-tighter italic">{stat.value.toString().padStart(2, '0')}</h3>
                  </div>
-                 <div className={cn("p-3 rounded-xl shrink-0 shadow-inner", stat.bg)}>
-                    <stat.icon size={18} className={stat.color} />
+                 <div className={cn("p-4 rounded-2xl shrink-0 shadow-inner", stat.bg)}>
+                    <stat.icon size={20} className={stat.color} />
                  </div>
               </CardContent>
            </Card>
          ))}
       </div>
 
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl w-full max-w-full overflow-hidden">
-        <CardHeader className="p-6 border-b border-earth-dark/10 flex flex-row items-center justify-between bg-earth-card/50">
+      <Card className="bg-white shadow-[0_30px_90px_rgba(0,0,0,0.06)] border-none rounded-[2.5rem] w-full max-w-full overflow-hidden">
+        <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between bg-white/50">
           <div>
-            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Fleet Registry</CardTitle>
+            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Fleet Asset Registry</CardTitle>
             <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1 tracking-[0.1em]">Verified heavy machinery assets</CardDescription>
           </div>
-          <button onClick={fetchData} className="p-2.5 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border border-transparent hover:border-earth-dark/10 shadow-sm">
-            <RefreshCw size={16} className={isLoading ? "animate-spin text-earth-primary" : ""} />
+          <button onClick={fetchData} className="p-3 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border border-earth-dark/5 shadow-sm">
+            <RefreshCw size={18} className={isLoading ? "animate-spin text-earth-primary" : ""} />
           </button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full max-w-full overflow-x-auto custom-scrollbar">
             <table className="w-full min-w-[800px]">
-              <thead className="bg-earth-dark text-earth-main">
+              <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px]">
                 <tr>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Unit Details</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Health & Service</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Assigned Operator</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-8 py-5 text-right text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Management</th>
+                  <th className="px-8 py-6 text-left">Unit Details</th>
+                  <th className="px-8 py-6 text-left">Health & Service</th>
+                  <th className="px-8 py-6 text-left">Assigned Operator</th>
+                  <th className="px-8 py-6 text-left">Status</th>
+                  <th className="px-8 py-6 text-right">Management</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-earth-dark/10">
+              <tbody className="bg-white">
                 {isLoading ? (
                   <tr>
                     <td colSpan="5" className="px-8 py-24 text-center">
@@ -216,20 +216,20 @@ export default function Tractors() {
                   </tr>
                 ) : filteredTractors.map((tractor) => (
                   <tr key={tractor.id} className="group hover:bg-earth-primary/5 transition-all duration-300">
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-5">
                        <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/10 shadow-inner group-hover:border-earth-primary/30 group-hover:scale-110 transition-all duration-300">
-                            <Truck size={20} className="group-hover:text-earth-primary transition-colors" />
-                         </div>
-                         <div>
-                            <p className="text-sm font-black text-earth-brown group-hover:tracking-tight transition-all font-outfit">{tractor.name}</p>
-                            <p className="text-[10px] font-bold text-earth-mut uppercase flex items-center gap-1 mt-0.5 tracking-tighter">
-                               SN: TL-TR-{tractor.id.toString().padStart(4, '0')}
-                            </p>
-                         </div>
+                          <div className="w-12 h-12 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/10 shadow-inner group-hover:border-earth-primary/30 group-hover:scale-110 transition-all duration-300">
+                             <Truck size={20} className="group-hover:text-earth-primary transition-colors" />
+                          </div>
+                          <div>
+                             <p className="text-sm font-black text-earth-brown group-hover:tracking-tight transition-all font-outfit">{tractor.name}</p>
+                             <p className="text-[10px] font-bold text-earth-mut uppercase flex items-center gap-1 mt-0.5 tracking-tighter">
+                                SN: TL-TR-{tractor.id.toString().padStart(4, '0')}
+                             </p>
+                          </div>
                        </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-5">
                        <div className="space-y-3 min-w-[200px]">
                           <div className="flex justify-between items-end mb-1">
                              <div>

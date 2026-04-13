@@ -84,13 +84,13 @@ export default function Operators() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-earth-dark/10 pb-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6">
         <div>
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown mb-1 uppercase italic text-shadow-sm">Fleet Command</h2>
-          <p className="text-[10px] tracking-[0.3em] font-black uppercase text-earth-mut flex items-center gap-2">
+          <p className="text-[9px] md:text-[10px] tracking-[0.2em] font-black uppercase text-earth-mut flex items-center gap-2">
             <Briefcase size={12} className="text-earth-primary" /> Active Operator Directory
           </p>
         </div>
@@ -115,35 +115,35 @@ export default function Operators() {
       </div>
 
       {/* Operators Table */}
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-[2rem] w-full max-w-full overflow-hidden">
-        <CardHeader className="p-8 border-b border-earth-dark/10 flex flex-row items-center justify-between">
+      <Card className="bg-white shadow-[0_30px_90px_rgba(0,0,0,0.06)] border-none rounded-[2.5rem] w-full max-w-full overflow-hidden">
+        <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between bg-white/50">
           <div>
-            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic">Certified Operators</CardTitle>
-            <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1">Authorized personnel managing agency equipment</CardDescription>
+            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic">Certified Operators Registry</CardTitle>
+            <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1 tracking-[0.1em]">Authorized personnel managing agency equipment</CardDescription>
           </div>
-          <button onClick={fetchOperators} className="p-2 hover:bg-earth-card-alt rounded-full transition-colors text-earth-mut hover:text-earth-brown">
-            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+          <button onClick={fetchOperators} className="p-3 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border border-earth-dark/5 shadow-sm">
+            <RefreshCw size={18} className={isLoading ? "animate-spin text-earth-primary" : ""} />
           </button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full max-w-full overflow-x-auto custom-scrollbar">
             <table className="w-full min-w-[800px] text-shadow-sm">
-              <thead className="bg-earth-dark text-earth-main">
+              <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px]">
                 <tr>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Personnel Entity</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Deployment State</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Reachability</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Commissioned</th>
-                  <th className="px-8 py-4 text-right text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Management</th>
+                  <th className="px-8 py-6 text-left">Personnel Entity</th>
+                  <th className="px-8 py-6 text-left">Deployment State</th>
+                  <th className="px-8 py-6 text-left">Reachability</th>
+                  <th className="px-8 py-6 text-left">Commissioned</th>
+                  <th className="px-8 py-6 text-right">Management</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-earth-dark/10">
+              <tbody className="bg-white">
                 {isLoading ? (
                   <tr>
                     <td colSpan="5" className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-4">
                         <Loader2 className="animate-spin text-earth-primary" size={32} />
-                        <p className="text-xs font-black text-earth-mut uppercase tracking-widest">Accessing Encrypted Personnel Files...</p>
+                        <p className="text-xs font-black text-earth-mut uppercase tracking-widest animate-pulse italic">Accessing Personnel Files...</p>
                       </div>
                     </td>
                   </tr>
@@ -154,8 +154,8 @@ export default function Operators() {
                     </td>
                   </tr>
                 ) : filteredOperators.map((op) => (
-                  <tr key={op.id} className="group hover:bg-earth-card transition-colors">
-                    <td className="px-8 py-6">
+                  <tr key={op.id} className="group hover:bg-earth-primary/5 transition-all duration-300">
+                    <td className="px-8 py-5">
                        <div className="flex items-center gap-4">
                          <div className="w-10 h-10 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/15 shadow-inner group-hover:border-earth-primary/30 transition-all">
                             <Briefcase size={18} />
@@ -168,7 +168,7 @@ export default function Operators() {
                          </div>
                        </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-5">
                         <Badge className={cn(
                             "text-[9px] px-3 py-1 border uppercase font-black tracking-[0.2em] h-6 rounded-lg",
                             op.availability === 'available' 
@@ -178,7 +178,7 @@ export default function Operators() {
                             {op.availability}
                         </Badge>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-5">
                        <div className="space-y-1">
                           <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
                              <Mail size={12} className="text-earth-mut" /> {op.email}
@@ -188,10 +188,10 @@ export default function Operators() {
                           </div>
                        </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-5">
                         <p className="text-xs font-bold text-earth-brown">{new Date(op.createdAt).toLocaleDateString()}</p>
                     </td>
-                    <td className="px-8 py-6 text-right flex items-center justify-end gap-2">
+                    <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
                        <Button 
                         size="sm"
                         variant="outline"

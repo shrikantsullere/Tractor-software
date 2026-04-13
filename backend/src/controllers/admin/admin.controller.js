@@ -11,13 +11,18 @@ export const getBookings = async (req, res) => {
     const { page, limit, status, search } = req.query;
     const result = await adminService.getAllBookings({ page, limit, status, search });
     
-    // Add formatted amounts
-    result.data = result.data.map(b => ({
+    // Ensure result.data is an array and add formatted amounts
+    const bookingsArray = Array.isArray(result.data) ? result.data : [];
+    const formattedBookings = bookingsArray.map(b => ({
       ...b,
       formatted_total_price: formatCurrency(b.totalPrice),
       formatted_base_price: formatCurrency(b.basePrice),
       formatted_distance_charge: formatCurrency(b.distanceCharge)
     }));
+
+    // Backwards compatibility: add 'bookings' key as some components might look for it
+    result.bookings = formattedBookings;
+    result.data = formattedBookings;
 
     return sendSuccess(res, result, "Bookings retrieved successfully");
   } catch (error) {
@@ -47,13 +52,20 @@ export const getPayments = async (req, res) => {
     const { page, limit, status, search } = req.query;
     const data = await adminService.getAllPayments({ page, limit, status, search });
     
-    // Add formatted fields
-    if (data.revenueData) {
-      data.revenueData.total = formatCurrency(data.revenueData.totalRaw || 0);
-      data.revenueData.payments = data.revenueData.payments.map(p => ({
+    // Add formatted fields to payments
+    if (data && data.payments) {
+      data.payments = data.payments.map(p => ({
         ...p,
-        formatted_amount: formatCurrency(p.amount)
+        formatted_amount: formatCurrency(p.amount),
+        formatted_total_amount: formatCurrency(p.totalAmount || 0),
+        formatted_paid_amount: formatCurrency(p.paidAmount || 0),
+        formatted_remaining_amount: formatCurrency(p.remainingAmount || 0)
       }));
+    }
+
+    // Add formatted aggregate revenue if present
+    if (data.totalRevenue !== undefined) {
+      data.formatted_total_revenue = formatCurrency(data.totalRevenue);
     }
 
     return sendSuccess(res, data, "Admin payment data retrieved successfully");
@@ -170,10 +182,16 @@ export const getTractors = async (req, res) => {
 
 export const createTractor = async (req, res) => {
   try {
-    const { name, model } = req.body;
+    const { name, model, engineHours, nextServiceDueHours, lastServiceDate } = req.body;
     if (!name) return sendError(res, "Tractor name is required", 400);
 
-    const result = await adminService.createTractor({ name, model });
+    const result = await adminService.createTractor({ 
+      name, 
+      model, 
+      engineHours: engineHours || 0,
+      nextServiceDueHours: nextServiceDueHours || 250,
+      lastServiceDate
+    });
     return sendSuccess(res, result, "Tractor created successfully", 201);
   } catch (error) {
     return sendError(res, error.message, 500);

@@ -120,6 +120,23 @@ export default function Dispatch() {
     }
   };
 
+  // Helper to handle split date/time inputs
+  const onDateTimeChange = (e, type) => {
+    const val = e.target.value;
+    const current = scheduledDate || "";
+    let [date, time] = current.split("T");
+    if (!date) date = new Date().toISOString().split("T")[0];
+    if (!time) time = "12:00";
+
+    if (type === 'date') date = val;
+    if (type === 'time') time = val;
+
+    setScheduledDate(`${date}T${time}`);
+
+    // Force native picker to close
+    e.target.blur();
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full lg:h-[calc(100vh-8rem)] relative">
       
@@ -188,7 +205,7 @@ export default function Dispatch() {
                     <Button 
                       size="sm" 
                       onClick={(e) => { e.stopPropagation(); setSchedulingJob(job); }}
-                      className="rounded-xl font-black text-[10px] uppercase tracking-widest px-6 h-9 transition-all bg-earth-brown text-white hover:bg-earth-primary hover:text-earth-brown"
+                      className="rounded-xl font-black text-[10px] uppercase tracking-widest px-6 h-9 transition-all bg-accent text-white hover:scale-105 active:scale-95 shadow-md shadow-accent/10 border-none"
                     >
                       Review & Schedule
                     </Button>
@@ -370,12 +387,20 @@ export default function Dispatch() {
 
                     <div className="p-4 bg-earth-main rounded-2xl border border-earth-dark/10">
                        <p className="text-[9px] font-black text-earth-mut uppercase tracking-widest mb-1.5 leading-none">Select Deployment Date & Time</p>
-                       <input 
-                         type="datetime-local" 
-                         value={scheduledDate}
-                         onChange={(e) => setScheduledDate(e.target.value)}
-                         className="w-full bg-earth-card border border-earth-dark/15 px-4 h-12 rounded-xl text-earth-brown font-bold focus:ring-2 focus:ring-earth-primary/50 outline-none"
-                       />
+                       <div className="grid grid-cols-2 gap-3">
+                        <input 
+                          type="date" 
+                          value={scheduledDate.split('T')[0] || ""}
+                          onChange={(e) => onDateTimeChange(e, 'date')}
+                          className="w-full bg-earth-card border border-earth-dark/15 px-4 h-12 rounded-xl text-earth-brown font-bold focus:ring-2 focus:ring-earth-primary/50 outline-none uppercase text-xs"
+                        />
+                        <input 
+                          type="time" 
+                          value={scheduledDate.split('T')[1] || ""}
+                          onChange={(e) => onDateTimeChange(e, 'time')}
+                          className="w-full bg-earth-card border border-earth-dark/15 px-4 h-12 rounded-xl text-earth-brown font-bold focus:ring-2 focus:ring-earth-primary/50 outline-none"
+                        />
+                       </div>
                     </div>
                   </div>
 
@@ -391,7 +416,7 @@ export default function Dispatch() {
                   <Button 
                     onClick={handleScheduleSubmit}
                     disabled={!scheduledDate || isScheduling}
-                    className="w-full h-14 bg-earth-primary hover:bg-earth-primary-hover text-earth-brown font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-earth-primary/20 disabled:grayscale transition-all"
+                    className="w-full h-14 bg-accent hover:scale-[1.02] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-accent/20 disabled:grayscale transition-all active:scale-95 border-none"
                   >
                     {isScheduling ? "Processing..." : "Confirm Schedule"}
                   </Button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Download, Calendar, Tractor, X, MapPin, CheckCircle, Clock, Mail, ChevronLeft, ChevronRight, FileText, Navigation, ArrowDown, Info } from 'lucide-react';
+import { Search, Download, Calendar, Tractor as TractorIcon, X, MapPin, CheckCircle, Clock, Mail, ChevronLeft, ChevronRight, FileText, Navigation, ArrowDown, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -146,23 +146,23 @@ export default function History() {
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown uppercase italic">Booking Archive</h1>
           <p className="text-[10px] md:text-sm text-earth-mut mt-1 font-black uppercase tracking-widest">Central Repository of Services</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 md:flex-none">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-earth-mut" size={16} />
             <input 
               type="text"
               placeholder="Search ID / Service..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-sm focus:ring-2 focus:ring-earth-primary/50 outline-none w-full md:w-64 transition-all"
+              className="pl-10 pr-4 h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-xs focus:ring-2 focus:ring-earth-primary/50 outline-none w-full transition-all"
             />
           </div>
           
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex gap-2 flex-1 sm:flex-none">
             <select 
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-xs uppercase tracking-widest px-4 focus:ring-2 focus:ring-earth-primary/50 outline-none cursor-pointer flex-1 md:flex-none"
+              className="h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-[10px] uppercase tracking-widest px-4 focus:ring-2 focus:ring-earth-primary/50 outline-none cursor-pointer flex-1 sm:w-36"
             >
               <option value="All">All Status</option>
               <option value="Completed">Completed</option>
@@ -175,17 +175,80 @@ export default function History() {
             <Button 
               onClick={handleExport}
               disabled={isExporting}
-              className="h-11 gap-2 font-black uppercase tracking-widest bg-accent hover:opacity-90 text-white rounded-xl shadow-lg shadow-accent/20 px-6"
+              className="h-11 gap-2 font-black uppercase tracking-widest bg-accent hover:opacity-90 text-white rounded-xl shadow-lg shadow-accent/20 px-5 flex-1 sm:flex-none"
             >
               {isExporting ? <Clock className="animate-spin" size={16} /> : <Download size={16} />}
-              <span className="hidden sm:inline">Export</span>
+              <span className="hidden lg:inline text-[10px]">Export</span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Grid List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+      {/* Table View - Desktop Only */}
+      <div className="hidden md:block overflow-hidden bg-earth-card border border-earth-dark/10 rounded-2xl shadow-sm">
+        <div className="overflow-x-auto text-left">
+          <table className="w-full text-sm whitespace-nowrap">
+            <thead className="bg-earth-dark text-earth-main uppercase font-black text-[10px] tracking-widest border-b border-earth-dark/10">
+              <tr>
+                <th className="px-6 py-5">Node ID</th>
+                <th className="px-6 py-5">Service Params</th>
+                <th className="px-6 py-5">Schedule</th>
+                <th className="px-6 py-5">Status</th>
+                <th className="px-6 py-5 text-right">Revenue</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-earth-dark/5 bg-earth-card-alt">
+              {bookings.length > 0 ? bookings.map((booking) => (
+                <tr 
+                  key={booking.id} 
+                  onClick={() => setSelectedBooking(booking)}
+                  className="hover:bg-earth-card transition-colors cursor-pointer group"
+                >
+                  <td className="px-6 py-5">
+                    <span className="font-black text-[10px] text-earth-mut bg-white px-2.5 py-1 rounded-lg border border-earth-dark/10 group-hover:border-earth-primary transition-all">#{booking.id}</span>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-3">
+                      <TractorIcon size={16} className="text-earth-primary" />
+                      <div>
+                        <p className="font-black text-earth-brown uppercase italic">{booking.service?.name}</p>
+                        <p className="text-[9px] font-bold text-earth-mut uppercase tracking-widest">{booking.landSize} Hectares</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-earth-mut" />
+                      <span className="text-[10px] font-bold text-earth-brown uppercase tabular-nums">
+                        {booking.scheduledAt ? new Date(booking.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Not Scheduled'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <Badge className={cn(
+                      "text-[8px] px-2 py-0 border font-black uppercase tracking-widest",
+                      booking.status?.toUpperCase() === 'COMPLETED' ? 'bg-earth-primary/20 text-earth-green border-earth-green/20' : 
+                      'bg-earth-dark/10 text-earth-mut border-earth-dark/20'
+                    )}>
+                      {booking.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-5 text-right font-black text-earth-brown tabular-nums">
+                    {formatCurrency(booking.totalPrice)}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-xs font-black text-earth-mut uppercase tracking-widest">Repository Empty</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Card View - Mobile Only */}
+      <div className="md:hidden grid grid-cols-1 gap-4">
         {loading ? (
           <div className="col-span-full py-16 text-center">
             <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={32} />
@@ -208,7 +271,7 @@ export default function History() {
                     <div className="flex justify-between items-start mb-5 shrink-0">
                       <div className="flex gap-4 items-center">
                         <div className="w-12 h-12 rounded-xl bg-earth-card-alt border border-earth-dark/15 text-earth-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(234,179,8,0.2)] transition-all">
-                          <Tractor size={22} />
+                          <TractorIcon size={22} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -298,17 +361,17 @@ export default function History() {
                 variant="ghost" size="icon" 
                 disabled={pagination.currentPage === 1 || loading}
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
-                className="h-9 w-9 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown"
+                className="h-10 w-10 bg-accent text-white hover:opacity-90 disabled:grayscale transition-all rounded-xl shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={20} className="text-white" />
               </Button>
               <Button 
                 variant="ghost" size="icon" 
                 disabled={pagination.currentPage === pagination.totalPages || loading}
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
-                className="h-9 w-9 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown"
+                className="h-10 w-10 bg-accent text-white hover:opacity-90 disabled:grayscale transition-all rounded-xl shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={20} className="text-white" />
               </Button>
            </div>
         </div>

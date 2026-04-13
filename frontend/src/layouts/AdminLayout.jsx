@@ -267,10 +267,10 @@ export default function AdminLayout() {
         </header>
 
         {/* Dynamic Page Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden relative scrollbar-hide">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 relative scrollbar-hide overscroll-y-none">
           {/* Subtle noise/grid background overlay */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-          <div className="p-4 lg:p-8 max-w-[1600px] mx-auto min-h-full relative z-10">
+          <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-full relative z-10">
             <Outlet />
           </div>
         </div>

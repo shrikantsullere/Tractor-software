@@ -34,26 +34,36 @@ function RecenterMap({ center }) {
 }
 
 export default function RequestLocationMap({ selectedLocation, onPick, autoUseCurrentLocation = true }) {
-  const center = useMemo(() => selectedLocation || DEFAULT_CENTER, [selectedLocation]);
   const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
+  const [deviceLocation, setDeviceLocation] = useState(null);
   const autoLocationLoadedRef = useRef(false);
   const watchIdRef = useRef(null);
   const manualPinRef = useRef(false);
 
+  const center = useMemo(() => {
+    if (selectedLocation) return selectedLocation;
+    if (deviceLocation) return deviceLocation;
+    return DEFAULT_CENTER;
+  }, [selectedLocation, deviceLocation]);
+
   useEffect(() => {
-    if (!autoUseCurrentLocation || selectedLocation || autoLocationLoadedRef.current) return;
     if (!navigator.geolocation) return;
 
-    autoLocationLoadedRef.current = true;
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        if (manualPinRef.current) return;
         const lat = Number(position.coords.latitude.toFixed(6));
         const lng = Number(position.coords.longitude.toFixed(6));
-        onPick({ lat, lng }, 'gps');
+        const point = { lat, lng };
+        
+        setDeviceLocation(point);
+
+        if (autoUseCurrentLocation && !selectedLocation && !manualPinRef.current && !autoLocationLoadedRef.current) {
+          autoLocationLoadedRef.current = true;
+          onPick(point, 'gps');
+        }
       },
       () => {
-        // Silent fallback to default center when GPS read fails.
+        // Silent fallback
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 2000 }
     );
@@ -80,6 +90,17 @@ export default function RequestLocationMap({ selectedLocation, onPick, autoUseCu
           }}
         />
         <RecenterMap center={center} />
+        {deviceLocation && (
+          <Marker 
+            position={[deviceLocation.lat, deviceLocation.lng]} 
+            icon={L.divIcon({
+              html: '<div style="background:#2563eb;color:white;border-radius:9999px;padding:5px;width:12px;height:12px;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>',
+              className: '',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            })} 
+          />
+        )}
         <Picker
           onPick={(point) => {
             manualPinRef.current = true;

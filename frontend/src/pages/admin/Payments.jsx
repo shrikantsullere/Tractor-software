@@ -126,7 +126,7 @@ export default function Payments() {
   }, [isAnyModalOpen]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
+    <div className="space-y-6 md:space-y-8 max-w-[1600px] mx-auto pb-8">
       
       {/* Detail Modal Overlay */}
       {selectedBooking && createPortal(
@@ -209,10 +209,10 @@ export default function Payments() {
       )}
       
       {/* Header & Controls */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-earth-dark/10 pb-6">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 pb-6">
         <div>
-          <h2 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown mb-0.5 uppercase">Treasury</h2>
-          <p className="text-[9px] tracking-[0.2em] font-black uppercase text-earth-mut">Global Financial Ledger</p>
+          <h2 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown mb-0.5 uppercase italic">Treasury</h2>
+          <p className="text-[9px] tracking-[0.2em] font-black uppercase text-earth-mut">Global Financial Ledger Registry</p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
@@ -255,37 +255,37 @@ export default function Payments() {
 
           return (
             <>
-              <Card className="bg-earth-card-alt shadow-sm border-earth-dark/15/50 rounded-2xl overflow-hidden group">
-                <CardContent className="p-5 flex justify-between items-center">
+              <Card className="bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] border-none rounded-[2rem] overflow-hidden group hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all">
+                <CardContent className="p-6 flex justify-between items-center">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-earth-green mb-2">Total Revenue Confirmed</p>
-                    <h3 className="text-2xl font-black text-earth-brown italic">{formatCurrency(totalRev)}</h3>
+                    <h3 className="text-3xl font-black text-earth-brown italic">{formatCurrency(totalRev)}</h3>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-400 flex items-center justify-center border border-primary-500/20">
-                    <CheckCircle size={18} />
+                  <div className="w-12 h-12 rounded-2xl bg-earth-green/10 text-earth-green flex items-center justify-center border border-earth-green/10">
+                    <CheckCircle size={20} />
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-earth-card-alt shadow-sm border-earth-dark/15/50 rounded-2xl overflow-hidden group">
-                <CardContent className="p-5 flex justify-between items-center">
+              <Card className="bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] border-none rounded-[2rem] overflow-hidden group hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all">
+                <CardContent className="p-6 flex justify-between items-center">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-earth-primary mb-2">Pending Escrow</p>
-                    <h3 className="text-2xl font-black text-earth-brown italic">{formatCurrency(pendRev)}</h3>
+                    <h3 className="text-3xl font-black text-earth-brown italic">{formatCurrency(pendRev)}</h3>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center border border-accent/20">
-                    <Clock size={18} />
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center border border-accent/10">
+                    <Clock size={20} />
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-earth-card/40 border-earth-dark/10 shadow-inner rounded-2xl overflow-hidden">
-                <CardContent className="p-5 flex justify-between items-center">
+              <Card className="bg-white/40 shadow-inner border-none rounded-[2rem] overflow-hidden">
+                <CardContent className="p-6 flex justify-between items-center">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-earth-mut mb-2">System Health</p>
-                    <h3 className="text-2xl font-black text-earth-brown italic">{health}%</h3>
+                    <h3 className="text-3xl font-black text-earth-brown italic">{health}%</h3>
                   </div>
-                  <CheckCircle2 size={18} className="text-primary-500" />
+                  <CheckCircle2 size={20} className="text-earth-green" />
                 </CardContent>
               </Card>
             </>
@@ -296,30 +296,30 @@ export default function Payments() {
       {/* Main Ledger - Compact Table */}
       <div className="space-y-3">
         {/* Desktop Table */}
-        <Card className="hidden lg:block shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-2xl overflow-hidden">
+        <Card className="hidden lg:block shadow-[0_30px_90px_rgba(0,0,0,0.06)] border-none bg-white rounded-[2.5rem] overflow-hidden">
           <div className="overflow-x-auto text-left">
             <table className="w-full text-sm whitespace-nowrap">
-              <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px] border-b border-earth-dark/15/30">
+              <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px]">
                 <tr>
-                  <th className="px-6 py-4">Ledger ID</th>
-                  <th className="px-6 py-4">Entity</th>
-                  <th className="px-6 py-4">Financials</th>
-                  <th className="px-6 py-4">Status & Method</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-8 py-6">Ledger ID</th>
+                  <th className="px-8 py-6">Entity</th>
+                  <th className="px-8 py-6">Financials</th>
+                  <th className="px-8 py-6">Status & Method</th>
+                  <th className="px-8 py-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-earth-dark/10 bg-earth-card-alt">
+              <tbody className="bg-white">
                 {isLoading ? (
                   <tr>
                     <td colSpan={5} className="py-20 text-center">
                       <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={24} />
-                      <p className="text-[10px] font-black uppercase text-earth-mut">Syncing Ledger...</p>
+                      <p className="text-[10px] font-black uppercase text-earth-mut animate-pulse italic">Syncing Ledger Frequency...</p>
                     </td>
                   </tr>
                 ) : filteredPayments.length > 0 ? filteredPayments.map((p) => {
                   return (
-                    <tr key={p.id} className={cn("hover:bg-earth-card transition-all group", p.type === 'due' ? "bg-red-500/5" : "")}>
-                      <td className="px-6 py-3">
+                    <tr key={p.id} className={cn("hover:bg-earth-primary/5 transition-all group", p.type === 'due' ? "bg-red-500/5" : "")}>
+                      <td className="px-8 py-5">
                         <span className={cn(
                           "font-bold text-[10px] bg-earth-card border px-2 py-1 rounded uppercase tracking-widest transition-colors",
                           p.type === 'due' ? "text-red-400 border-red-500/20" : "text-earth-mut border-earth-dark/10 group-hover:text-earth-primary"
@@ -327,18 +327,18 @@ export default function Payments() {
                           {String(p.id).toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-8 py-5">
                         <p className="font-black text-earth-brown text-sm">{p.booking?.farmer?.name || 'Unknown'}</p>
                         <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">#{p.bookingId}</p>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-8 py-5">
                         <p className="font-black text-earth-brown text-base tracking-tight leading-tight">{formatCurrency(p.totalAmount || 0)}</p>
                         <div className="flex gap-2 mt-1">
                           <span className="text-[10px] text-earth-green/80 font-black tracking-widest uppercase">Paid: {formatCurrency(p.paidAmount || 0)}</span>
                           <span className="text-[10px] text-red-400 font-black tracking-widest uppercase border-l border-earth-dark/20 pl-2">Rem: {formatCurrency(p.remainingAmount || 0)}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-8 py-5">
                         <Badge className={cn(
                           "text-[8px] px-2 py-0 border uppercase font-black",
                           p.type === 'payment' ? 'bg-primary-500/10 text-primary-400 border-primary-500/20' : 
@@ -351,13 +351,11 @@ export default function Payments() {
                           METHOD: {p.method?.toUpperCase() || 'UNRECORDED'}
                         </p>
                       </td>
-                      <td className="px-6 py-3 text-right">
+                      <td className="px-8 py-5 text-right">
                         <div className="flex justify-end gap-1.5 transition-all">
                           <Button 
-                            variant="ghost" 
-                            size="icon" 
                             onClick={() => setSelectedBooking(p)}
-                            className="w-8 h-8 rounded-lg bg-earth-card border border-earth-dark/15 text-earth-mut hover:text-earth-brown"
+                            className="w-8 h-8 rounded-lg bg-accent text-white hover:opacity-90 shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0 transition-all active:scale-95"
                           >
                             <Eye size={14} />
                           </Button>
@@ -377,24 +375,22 @@ export default function Payments() {
 
           {/* Pagination Controls */}
           {pagination.totalPages > 1 && (
-            <div className="p-4 border-t border-earth-dark/15/30 bg-earth-card/20 flex items-center justify-between">
-               <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Showing page {pagination.currentPage} of {pagination.totalPages}</p>
+            <div className="p-6 bg-white flex items-center justify-between">
+               <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest italic opacity-70">Showing page {pagination.currentPage} of {pagination.totalPages}</p>
                <div className="flex gap-2">
                   <Button 
-                    variant="ghost" size="icon" 
                     disabled={pagination.currentPage === 1 || isLoading}
                     onClick={() => fetchPayments(pagination.currentPage - 1)}
-                    className="h-8 w-8 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown disabled:opacity-30"
+                    className="h-9 w-9 bg-accent text-white hover:opacity-90 disabled:grayscale transition-all rounded-xl shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0"
                   >
-                    <ChevronLeft size={16} />
+                    <ChevronLeft size={18} />
                   </Button>
                   <Button 
-                    variant="ghost" size="icon" 
                     disabled={pagination.currentPage === pagination.totalPages || isLoading}
                     onClick={() => fetchPayments(pagination.currentPage + 1)}
-                    className="h-8 w-8 bg-earth-card border border-earth-dark/10 text-earth-mut hover:text-earth-brown disabled:opacity-30"
+                    className="h-9 w-9 bg-accent text-white hover:opacity-90 disabled:grayscale transition-all rounded-xl shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0"
                   >
-                    <ChevronRight size={16} />
+                    <ChevronRight size={18} />
                   </Button>
                </div>
             </div>

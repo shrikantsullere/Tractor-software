@@ -68,7 +68,9 @@ export default function Payments() {
       setPaymentStep('processing');
       
       if (paymentPortal.targetId === 'ALL') {
-        await api.payments.settleAll();
+        // Full settlement logic now individual to ensure consistency
+        alert('Bulk settlement is temporarily disabled. Please pay individual bookings.');
+        return;
       } else {
         await api.payments.payBooking({
           bookingId: paymentPortal.targetId,

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment, useMemo } from 'react';
 import { 
   Users, Tractor, Banknote, Navigation, ArrowUpRight, ArrowDownRight, 
   Activity, Clock, MapPin, CheckCircle, AlertCircle, Fuel, Battery,
   MoreVertical, ShieldCheck, Zap
 } from 'lucide-react';
-import { MapContainer, Marker, TileLayer, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
@@ -15,7 +15,17 @@ import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { formatCurrency } from '../../lib/format';
 
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
+const OPENFREE_TILES = 'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png';
+const OSM_FALLBACK_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+const farmerPinIcon = L.divIcon({
+  html: '<div style="background:#dc2626;color:white;border-radius:9999px;padding:4px 6px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)">📍</div>',
+  className: '',
+  iconSize: [20, 24],
+  iconAnchor: [10, 22],
+});
 
 function FitBounds({ markers }) {
   const map = useMap();
@@ -27,6 +37,34 @@ function FitBounds({ markers }) {
   return null;
 }
 
+function DashboardMapAutoCenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.setView([center.lat, center.lng]);
+  }, [center, map]);
+  return null;
+}
+
+const getRoute = async (start, end) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+    
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) throw new Error('Route service busy');
+    const data = await res.json();
+    const route = data?.routes?.[0];
+    if (!route) throw new Error('No route available');
+
+    return route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  } catch (error) {
+    return [[start.lat, start.lng], [end.lat, end.lng]];
+  }
+};
+
 export default function Dashboard() {
   const [assignmentStatus, setAssignmentStatus] = useState(null);
   
@@ -35,25 +73,31 @@ export default function Dashboard() {
   const [assignmentQueue, setAssignmentQueue] = useState([]);
   const [revenueChart, setRevenueChart] = useState({ labels: [], data: [] });
   const [fleetData, setFleetData] = useState([]);
-  const [fleetLocations, setFleetLocations] = useState({}); // { operatorId: { lat, lng } }
+  const [activeJobs, setActiveJobs] = useState([]);
+  const [fleetLocations, setFleetLocations] = useState({}); // { operatorId: { lat, lng, heading } }
+  const [jobRoutes, setJobRoutes] = useState({}); // { jobId: coordinates[] }
   const [timeframe, setTimeframe] = useState('daily');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const [deviceLocation, setDeviceLocation] = useState(null);
+  const [tileUrl, setTileUrl] = useState(OSM_FALLBACK_TILES);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        const [metricsRes, queueRes, fleetRes] = await Promise.all([
+        const [metricsRes, queueRes, fleetRes, jobsRes] = await Promise.all([
           api.admin.getDashboardMetrics(),
           api.admin.getAssignmentQueue(),
-          api.admin.getDashboardFleet()
+          api.admin.getDashboardFleet(),
+          api.admin.getActiveJobs()
         ]);
         
         if (metricsRes?.success) setMetrics(metricsRes.data);
         if (queueRes?.success) setAssignmentQueue(queueRes.data);
         if (fleetRes?.success) setFleetData(fleetRes.data);
+        if (jobsRes?.success) setActiveJobs(jobsRes.data || []);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
@@ -63,24 +107,45 @@ export default function Dashboard() {
     fetchDashboardData();
 
     // Socket for live fleet updates
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', { 
-      transports: ['websocket'] 
+    const socket = io(SOCKET_URL, { 
+      transports: ['websocket'],
+      reconnection: true
     });
     
     socket.emit('tracking:join', { role: 'admin' });
     
     socket.on('location:update', (payload) => {
       if (!payload || !payload.operatorId) return;
-      setFleetLocations(prev => ({
-        ...prev,
-        [payload.operatorId]: { lat: payload.lat, lng: payload.lng }
-      }));
+      setFleetLocations(prev => {
+        const old = prev[payload.operatorId];
+        let heading = old?.heading || 0;
+        if (old) {
+          const dy = payload.lat - old.lat;
+          const dx = Math.cos(old.lat * Math.PI / 180) * (payload.lng - old.lng);
+          heading = Math.atan2(dx, dy) * 180 / Math.PI;
+        }
+        return {
+          ...prev,
+          [payload.operatorId]: { lat: payload.lat, lng: payload.lng, heading }
+        };
+      });
     });
 
-    return () => socket.disconnect();
+    return () => {
+      if (socket.connected) {
+        socket.disconnect();
+      } else {
+        socket.once('connect', () => socket.disconnect());
+      }
+    };
   }, []);
 
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setDeviceLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      });
+    }
     const fetchRevenueData = async () => {
       try {
         setIsChartLoading(true);
@@ -94,6 +159,31 @@ export default function Dashboard() {
     };
     fetchRevenueData();
   }, [timeframe]);
+
+  // Update routes when jobs or first operator locations arrive
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const fetchAllRoutes = async () => {
+      for (const job of activeJobs) {
+        if (isCancelled) break;
+        if (jobRoutes[job.id]) continue; 
+        
+        const opLoc = fleetLocations[job.operatorId];
+        if (opLoc && Number.isFinite(job.farmerLatitude)) {
+          // Delay to respect OSRM public API rate limits
+          await new Promise(r => setTimeout(r, 500));
+          if (isCancelled) break;
+          
+          const route = await getRoute(opLoc, { lat: job.farmerLatitude, lng: job.farmerLongitude });
+          setJobRoutes(prev => ({ ...prev, [job.id]: route }));
+        }
+      }
+    };
+
+    fetchAllRoutes();
+    return () => { isCancelled = true; };
+  }, [activeJobs, fleetLocations]); // Removed jobRoutes from dependencies to prevent excessive re-runs
   
   const stats = [
     { title: 'Active Jobs', value: metrics.active_jobs, icon: Activity, trend: '+2', up: true },
@@ -107,6 +197,18 @@ export default function Dashboard() {
   };
 
   const chartMax = Math.max(...(revenueChart.data?.length ? revenueChart.data : [1000]));
+
+  const mapMarkers = useMemo(() => {
+    const points = [];
+    if (deviceLocation) points.push(deviceLocation);
+    Object.values(fleetLocations).forEach(loc => points.push(loc));
+    activeJobs.forEach(job => {
+      if (Number.isFinite(job.farmerLatitude)) {
+        points.push({ lat: job.farmerLatitude, lng: job.farmerLongitude });
+      }
+    });
+    return points;
+  }, [deviceLocation, fleetLocations, activeJobs]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10 relative">
@@ -321,44 +423,100 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
               {/* Real GPS Map */}
-              <div className="h-[200px] bg-earth-main relative border-b border-earth-dark/10 shrink-0 group overflow-hidden">
-                <MapContainer 
+              <div className="h-[300px] bg-earth-main relative border-b border-earth-dark/10 shrink-0 group overflow-hidden">
+                 <MapContainer 
                   center={DEFAULT_CENTER} 
                   zoom={10} 
                   className="w-full h-full"
                   zoomControl={false}
                   attributionControl={false}
+                  style={{ height: '300px', minHeight: '300px' }}
                 >
-                   <TileLayer url="https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png" />
+                   <TileLayer 
+                    url={tileUrl}
+                    eventHandlers={{
+                      tileerror: () => {
+                        if (tileUrl !== OSM_FALLBACK_TILES) setTileUrl(OSM_FALLBACK_TILES);
+                      }
+                    }}
+                  />
                    
-                   <FitBounds markers={Object.values(fleetLocations)} />
+                   <DashboardMapAutoCenter center={deviceLocation} />
+                   <FitBounds markers={mapMarkers} />
+
+                   {deviceLocation && (
+                    <Marker 
+                      position={[deviceLocation.lat, deviceLocation.lng]} 
+                      icon={L.divIcon({
+                        html: '<div style="background:#2563eb;color:white;border-radius:9999px;padding:5px;width:12px;height:12px;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3)"></div>',
+                        className: '',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
+                      })} 
+                    >
+                      <Popup><div className="text-[10px] font-black uppercase">You are here</div></Popup>
+                    </Marker>
+                   )}
 
                    {fleetData.map((t) => {
-                     // Check if we have a live location, else maybe skip or use a default if available
                      const loc = fleetLocations[t.operatorId];
                      if (!loc) return null;
                      
+                     // Find if this tractor is on a job
+                     const job = activeJobs.find(j => j.operatorId === t.operatorId);
+                     const route = job ? jobRoutes[job.id] : null;
+
                      const tractorIcon = L.divIcon({
-                        html: `<div style="background:${t.status?.toLowerCase() === 'available' ? '#16a34a' : '#ea7b08'};color:#fff;border-radius:8px;padding:4px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)">🚜</div>`,
+                        html: `<div style="transform: rotate(${loc.heading || 0}deg); background:${t.status?.toLowerCase() === 'available' ? '#16a34a' : '#ea7b08'};color:#fff;border-radius:8px;padding:4px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)">🚜</div>`,
                         className: '',
                         iconSize: [24, 24],
                         iconAnchor: [12, 12],
                      });
 
-                     return (
-                        <Marker key={t.id} position={[loc.lat, loc.lng]} icon={tractorIcon}>
-                           <Popup>
-                              <div className="text-[10px] font-bold">
-                                 {t.operator_name} - {t.tractor_model}
-                              </div>
-                           </Popup>
-                        </Marker>
-                     );
+                      return (
+                        <Fragment key={t.id}>
+                          <Marker position={[loc.lat, loc.lng]} icon={tractorIcon}>
+                             <Popup>
+                                <div className="text-[10px] space-y-1">
+                                   <p className="font-black uppercase text-earth-mut">Unit #T-{t.id}</p>
+                                   <p className="font-bold text-earth-brown">{t.operator_name}</p>
+                                   {job && <p className="text-[9px] text-earth-primary font-bold">Heading to: {job.farmerName}</p>}
+                                </div>
+                             </Popup>
+                          </Marker>
+                          
+                          {/* Render Farmer Target for this job */}
+                          {job && Number.isFinite(job.farmerLatitude) && (
+                            <Marker position={[job.farmerLatitude, job.farmerLongitude]} icon={farmerPinIcon}>
+                              <Popup>
+                                <div className="text-[10px] space-y-1">
+                                   <p className="font-black uppercase text-earth-mut">Client</p>
+                                   <p className="font-bold text-earth-brown">{job.farmerName}</p>
+                                   <p className="text-[9px] text-earth-sub">Task: {job.serviceName}</p>
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {route && route.length > 0 && (
+                            <Polyline 
+                              positions={route}
+                              pathOptions={{ color: '#16a34a', weight: 2, opacity: 0.7 }}
+                            />
+                          )}
+                          {job && !route && (
+                             <Polyline 
+                                positions={[[loc.lat, loc.lng], [job.farmerLatitude, job.farmerLongitude]]}
+                                pathOptions={{ color: '#dc2626', weight: 1, dashArray: '5, 5', opacity: 0.5 }}
+                             />
+                          )}
+                        </Fragment>
+                      );
                    })}
                 </MapContainer>
                 
                 {/* Fallback overlay if map is empty */}
-                {Object.keys(fleetLocations).length === 0 && (
+                {Object.keys(fleetLocations).length === 0 && !deviceLocation && (
                    <div className="absolute inset-0 bg-earth-main/50 backdrop-blur-[2px] z-[500] flex items-center justify-center pointer-events-none">
                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-earth-mut flex items-center gap-2">
                          <Activity size={12} className="text-earth-primary" /> Calibrating Satellite View...
@@ -465,3 +623,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

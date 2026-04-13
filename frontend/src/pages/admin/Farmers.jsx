@@ -56,13 +56,13 @@ export default function Farmers() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-earth-dark/10 pb-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6">
         <div>
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-earth-brown mb-1 uppercase italic font-outfit">Service Consumers</h2>
-          <p className="text-[10px] tracking-[0.3em] font-black uppercase text-earth-mut flex items-center gap-2">
+          <p className="text-[9px] md:text-[10px] tracking-[0.2em] font-black uppercase text-earth-mut flex items-center gap-2">
             <Users size={12} className="text-earth-primary" /> Farmer Database Registry
           </p>
         </div>
@@ -93,28 +93,28 @@ export default function Farmers() {
            { label: 'Active Users', value: farmers.filter(f => f.status === 'active').length, icon: Shield, color: 'text-earth-green', bg: 'bg-earth-primary/10' },
            { label: 'Dormant Accounts', value: farmers.filter(f => f.status === 'inactive').length, icon: ShieldOff, color: 'text-zinc-500', bg: 'bg-zinc-500/10' },
          ].map((stat, i) => (
-           <Card key={i} className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl border-b-4 border-b-earth-primary/20">
-              <CardContent className="p-4 flex items-center justify-between">
+           <Card key={i} className="bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] border-none rounded-[2rem] overflow-hidden group hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all">
+              <CardContent className="p-6 flex items-center justify-between">
                  <div>
-                    <p className="text-[9px] font-black text-earth-mut uppercase tracking-[0.15em] mb-0.5 font-outfit">{stat.label}</p>
-                    <h3 className="text-2xl font-black text-earth-brown tracking-tighter">{stat.value.toString().padStart(2, '0')}</h3>
+                    <p className="text-[9px] font-black text-earth-mut uppercase tracking-[0.15em] mb-1.5 font-outfit">{stat.label}</p>
+                    <h3 className="text-3xl font-black text-earth-brown tracking-tighter italic">{stat.value.toString().padStart(2, '0')}</h3>
                  </div>
-                 <div className={cn("p-3 rounded-xl shrink-0 shadow-inner", stat.bg)}>
-                    <stat.icon size={18} className={stat.color} />
+                 <div className={cn("p-4 rounded-2xl shrink-0 shadow-inner", stat.bg)}>
+                    <stat.icon size={20} className={stat.color} />
                  </div>
               </CardContent>
            </Card>
          ))}
       </div>
 
-      <Card className="bg-earth-card border-earth-dark/10 shadow-sm rounded-2xl w-full max-w-full overflow-hidden">
-        <CardHeader className="p-6 border-b border-earth-dark/10 flex flex-row items-center justify-between bg-earth-card/50">
+      <Card className="bg-white shadow-[0_30px_90px_rgba(0,0,0,0.06)] border-none rounded-[2.5rem] w-full max-w-full overflow-hidden">
+        <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between bg-white/50">
           <div>
-            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Platform Users</CardTitle>
+            <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Platform Users Registry</CardTitle>
             <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1 tracking-[0.1em]">Verified agricultural service consumers</CardDescription>
           </div>
-          <button onClick={fetchFarmers} className="p-2.5 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border border-transparent hover:border-earth-dark/10 shadow-sm">
-            <RefreshCw size={16} className={isLoading ? "animate-spin text-earth-primary" : ""} />
+          <button onClick={fetchFarmers} className="p-3 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown shadow-sm border border-earth-dark/5">
+            <RefreshCw size={18} className={isLoading ? "animate-spin text-earth-primary" : ""} />
           </button>
         </CardHeader>
         <CardContent className="p-0">
@@ -140,19 +140,19 @@ export default function Farmers() {
               {/* Desktop Table View */}
               <div className="hidden md:block w-full max-w-full overflow-x-auto custom-scrollbar">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-earth-dark text-earth-main">
+                  <thead className="bg-earth-dark text-earth-main uppercase font-black tracking-widest text-[9px]">
                     <tr>
-                      <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">User Entity</th>
-                      <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Contact & Reach</th>
-                      <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Operations</th>
-                      <th className="px-8 py-5 text-left text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Account State</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black text-earth-main uppercase tracking-[0.2em]">Management</th>
+                      <th className="px-8 py-6 text-left">User Entity</th>
+                      <th className="px-8 py-6 text-left">Contact & Reach</th>
+                      <th className="px-8 py-6 text-left">Operations</th>
+                      <th className="px-8 py-6 text-left">Account State</th>
+                      <th className="px-8 py-6 text-right">Management</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-earth-dark/10">
+                  <tbody className="bg-white">
                     {filteredFarmers.map((farmer) => (
                       <tr key={farmer.id} className="group hover:bg-earth-primary/5 transition-all duration-300">
-                        <td className="px-8 py-6">
+                        <td className="px-8 py-5">
                            <div className="flex items-center gap-4">
                              <div className="w-12 h-12 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/10 shadow-inner group-hover:border-earth-primary/30 group-hover:scale-110 transition-all duration-300">
                                 <Users size={20} className="group-hover:text-earth-primary transition-colors" />
@@ -165,7 +165,7 @@ export default function Farmers() {
                              </div>
                            </div>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-8 py-5">
                            <div className="space-y-1.5">
                               <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
                                  <Mail size={12} className="text-earth-mut" /> {farmer.email}
@@ -175,7 +175,7 @@ export default function Farmers() {
                               </div>
                            </div>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-8 py-5">
                            <div className="flex items-center gap-3">
                               <div className="h-9 w-9 bg-earth-primary/10 rounded-xl flex items-center justify-center text-earth-primary border border-earth-primary/20 shadow-inner">
                                  <span className="text-xs font-black">{farmer.totalBookings}</span>
@@ -186,7 +186,7 @@ export default function Farmers() {
                               </div>
                            </div>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-8 py-5">
                           <Badge className={cn(
                             "text-[9px] px-3 py-1 border uppercase font-black tracking-[0.2em] h-7 rounded-lg shadow-sm border-b-2",
                             farmer.status === 'active' 
@@ -196,7 +196,7 @@ export default function Farmers() {
                             {farmer.status}
                           </Badge>
                         </td>
-                        <td className="px-8 py-6 text-right">
+                        <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button 
                               size="sm"
