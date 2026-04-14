@@ -22,7 +22,6 @@ export default function Operators() {
   // New Operator Form State
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
     password: ''
   });
@@ -57,7 +56,7 @@ export default function Operators() {
       if (result.success) {
         setOperators([result.data, ...operators]);
         setIsModalOpen(false);
-        setFormData({ name: '', email: '', phone: '', password: '' });
+        setFormData({ name: '', phone: '', password: '' });
       }
     } catch (error) {
       setFormError(error.message || "Failed to create operator");
@@ -79,7 +78,6 @@ export default function Operators() {
 
   const filteredOperators = operators.filter(op => 
     op.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    op.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (op.phone && op.phone.includes(searchTerm))
   );
 
@@ -181,11 +179,13 @@ export default function Operators() {
                     <td className="px-8 py-5">
                        <div className="space-y-1">
                           <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
-                             <Mail size={12} className="text-earth-mut" /> {op.email}
+                             <Phone size={14} className="text-earth-primary" /> {op.phone}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-earth-mut uppercase">
-                             <Phone size={10} className="text-earth-primary" /> {op.phone || 'N/A'}
-                          </div>
+                          {op.email && (
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-earth-mut uppercase">
+                               <Mail size={12} className="text-earth-mut" /> {op.email}
+                            </div>
+                          )}
                        </div>
                     </td>
                     <td className="px-8 py-5">
@@ -258,29 +258,15 @@ export default function Operators() {
                    </div>
 
                    <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Email System Key</label>
-                     <div className="relative group">
-                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
-                       <Input 
-                         required
-                         type="email"
-                         value={formData.email}
-                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
-                         placeholder="operator@tractorlink.com"
-                       />
-                     </div>
-                   </div>
-
-                   <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] ml-1">Contact Phone</label>
                       <div className="relative group">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-earth-primary transition-colors" size={16} />
                         <Input 
+                          required
                           value={formData.phone}
                           onChange={(e) => setFormData({...formData, phone: e.target.value})}
                           className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
-                          placeholder="+234 800 000 0000"
+                          placeholder="08012345678"
                         />
                       </div>
                     </div>

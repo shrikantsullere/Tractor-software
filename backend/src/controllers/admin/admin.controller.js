@@ -141,8 +141,8 @@ export const createOperator = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
     
-    if (!name || !email || !password) {
-      return sendError(res, "Name, email, and password are required", 400);
+    if (!name || !phone || !password) {
+      return sendError(res, "Name, phone, and password are required", 400);
     }
 
     const result = await adminService.createOperator({ name, email, password, phone });

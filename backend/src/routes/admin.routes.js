@@ -51,6 +51,10 @@ router.get('/reports/revenue', reportController.getRevenue);
 router.get('/reports/service-usage', reportController.getServiceUsage);
 router.get('/reports/fleet', reportController.getFleet);
 router.get('/reports/farmers', reportController.getFarmers);
+router.get('/reports/bookings-analytics', reportController.getBookingsAnalytics);
+router.get('/reports/operator-performance', reportController.getOperatorPerformance);
+router.get('/reports/job-status', reportController.getJobStatusDistribution);
+router.get('/reports/export', reportController.getExportData);
 
 // System Settings - Global Configuration
 router.get('/settings/config', settingsController.getSystemConfig);

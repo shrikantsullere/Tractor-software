@@ -55,9 +55,11 @@ export default function Payments() {
   const filteredPayments = useMemo(() => {
     return (revenueData.payments || []).filter(p => {
       const farmerName = p.booking?.farmer?.name || '';
+      const farmerPhone = p.booking?.farmer?.phone || '';
       const matchesSearch = 
         p.id.toString().includes(searchTerm) || 
-        farmerName.toLowerCase().includes(searchTerm.toLowerCase());
+        farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        farmerPhone.includes(searchTerm);
       
       const pStatus = p.booking?.paymentStatus?.toLowerCase() || (p.type === 'payment' ? 'paid' : 'pending');
       const matchesStatus = statusFilter === 'all' || pStatus === statusFilter.toLowerCase();
@@ -164,6 +166,7 @@ export default function Payments() {
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Farmer</p>
                     <p className="font-black text-earth-brown text-lg leading-tight">{selectedBooking.booking?.farmer?.name || 'Unknown'}</p>
+                    <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest">{selectedBooking.booking?.farmer?.phone || 'N/A'}</p>
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Date</p>
@@ -329,7 +332,7 @@ export default function Payments() {
                       </td>
                       <td className="px-8 py-5">
                         <p className="font-black text-earth-brown text-sm">{p.booking?.farmer?.name || 'Unknown'}</p>
-                        <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">#{p.bookingId}</p>
+                        <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">{p.booking?.farmer?.phone || 'N/A'}</p>
                       </td>
                       <td className="px-8 py-5">
                         <p className="font-black text-earth-brown text-base tracking-tight leading-tight">{formatCurrency(p.totalAmount || 0)}</p>

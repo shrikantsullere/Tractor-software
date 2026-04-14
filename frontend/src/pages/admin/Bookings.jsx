@@ -186,7 +186,7 @@ export default function Bookings() {
                   </td>
                   <td className="px-8 py-5">
                     <p className="font-black text-earth-brown text-base tracking-tight">{booking.farmer?.name || 'UNKNOWN'}</p>
-                    <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-0.5">{booking.farmer?.email || 'N/A'}</p>
+                    <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-0.5">{booking.farmer?.phone || 'N/A'}</p>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">

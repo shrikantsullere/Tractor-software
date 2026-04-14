@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, History, Search, Filter, Mail, MapPin, MoreHorizontal, Shield, ShieldOff, CheckCircle2, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
+import { Users, History, Search, Filter, Mail, Phone, MapPin, MoreHorizontal, Shield, ShieldOff, CheckCircle2, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -51,7 +51,7 @@ export default function Farmers() {
 
   const filteredFarmers = farmers.filter(f => 
     f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    f.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (f.phone && f.phone.includes(searchTerm)) ||
     f.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -168,7 +168,7 @@ export default function Farmers() {
                         <td className="px-8 py-5">
                            <div className="space-y-1.5">
                               <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
-                                 <Mail size={12} className="text-earth-mut" /> {farmer.email}
+                                 <Phone size={12} className="text-earth-primary" /> {farmer.phone}
                               </div>
                               <div className="flex items-center gap-2 text-[10px] font-bold text-earth-mut uppercase italic tracking-tighter">
                                  <MapPin size={10} className="text-earth-primary" /> {farmer.location}
@@ -201,7 +201,7 @@ export default function Farmers() {
                             <Button 
                               size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/admin/bookings?search=${farmer.email}`)}
+                              onClick={() => navigate(`/admin/bookings?search=${farmer.phone}`)}
                               className="text-[9px] px-4 font-black uppercase tracking-widest h-10 rounded-xl bg-accent text-white border-none hover:opacity-90 transition-all shadow-lg shadow-accent/20 active:translate-y-0.5"
                             >
                               <History size={14} className="mr-1.5" /> History
@@ -260,7 +260,7 @@ export default function Farmers() {
 
                     <div className="grid grid-cols-1 gap-3 py-3 border-y border-earth-dark/10">
                       <div className="flex items-center gap-2 text-[11px] font-bold text-earth-brown truncate">
-                        <Mail size={14} className="text-earth-mut shrink-0" /> {farmer.email}
+                        <Phone size={14} className="text-earth-primary shrink-0" /> {farmer.phone}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] font-bold text-earth-mut uppercase italic">
                         <MapPin size={14} className="text-earth-primary shrink-0" /> {farmer.location}
@@ -279,7 +279,7 @@ export default function Farmers() {
                     <div className="grid grid-cols-2 gap-3 pt-4">
                       <Button 
                         size="sm"
-                        onClick={() => navigate(`/admin/bookings?search=${farmer.email}`)}
+                        onClick={() => navigate(`/admin/bookings?search=${farmer.phone}`)}
                         className="w-full h-11 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-[9px] shadow-lg shadow-accent/20 border-none"
                       >
                         <History size={14} className="mr-1.5" /> History

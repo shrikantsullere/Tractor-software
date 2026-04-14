@@ -43,14 +43,14 @@ async function main() {
   const passwordHashOperator = await bcrypt.hash('operator123', 10);
 
   const demoUsers = [
-    { name: 'Admin Demo', email: 'admin@tractorlink.com', passwordHash: passwordHashAdmin, role: 'admin', phone: '1111111111' },
-    { name: 'Farmer Demo', email: 'farmer@tractorlink.com', passwordHash: passwordHashFarmer, role: 'farmer', phone: '2222222222' },
-    { name: 'Kiaan Operator', email: 'operator@tractorlink.com', passwordHash: passwordHashOperator, role: 'operator', phone: '3333333333' }
+    { name: 'Admin Demo', email: 'admin@tractorlink.com', passwordHash: passwordHashAdmin, role: 'admin', phone: '08000000001' },
+    { name: 'Farmer Demo', email: 'farmer@tractorlink.com', passwordHash: passwordHashFarmer, role: 'farmer', phone: '08000000002' },
+    { name: 'Kiaan Operator', email: 'operator@tractorlink.com', passwordHash: passwordHashOperator, role: 'operator', phone: '08000000003' }
   ];
 
   for (const user of demoUsers) {
     await prisma.user.upsert({
-      where: { email: user.email },
+      where: { phone: user.phone },
       update: user,
       create: user,
     });
@@ -95,7 +95,7 @@ async function main() {
   }
 
   console.log('Seeding demo tractor...');
-  const operatorUser = await prisma.user.findUnique({ where: { email: 'operator@tractorlink.com' } });
+  const operatorUser = await prisma.user.findUnique({ where: { phone: '08000000003' } });
   if (operatorUser) {
     await prisma.tractor.upsert({
       where: { operatorId: operatorUser.id },
@@ -114,7 +114,7 @@ async function main() {
   }
 
   console.log('Seeding demo bookings for farmer...');
-  const farmerUser = await prisma.user.findUnique({ where: { email: 'farmer@tractorlink.com' } });
+  const farmerUser = await prisma.user.findUnique({ where: { phone: '08000000002' } });
   const ploughingService = await prisma.service.findUnique({ where: { name: 'ploughing' } });
   
   if (farmerUser && ploughingService) {

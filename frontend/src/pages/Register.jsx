@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Tractor, User, Mail, Shield, Briefcase, Lock } from 'lucide-react';
+import { Tractor, User, Smartphone, Mail, Shield, Briefcase, Lock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +10,7 @@ export default function Register() {
   
   const [role, setRole] = useState('farmer');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -22,7 +23,13 @@ export default function Register() {
     setError('');
     setIsSubmitting(true);
 
-    const result = await register({ name, email, password, role });
+    if (typeof register !== 'function') {
+      setError('Registration system not ready. Please refresh.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const result = await register({ name, phone, email, password, role });
 
     if (result.success) {
       setSuccess(true);
@@ -121,13 +128,28 @@ export default function Register() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Email Address</label>
+                    <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Phone Number</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-earth-mut">
+                        <Smartphone size={18} />
+                      </div>
+                      <input 
+                        required 
+                        type="tel" 
+                        placeholder="08012345678" 
+                        className="w-full pl-11 pr-4 py-3.5 bg-earth-card border border-earth-dark/10 rounded-2xl text-earth-brown font-bold focus:outline-none focus:border-earth-primary focus:bg-earth-card-alt transition-all shadow-inner" 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Email Address (Optional)</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-earth-mut">
                         <Mail size={18} />
                       </div>
                       <input 
-                        required 
                         type="email" 
                         placeholder="name@example.com" 
                         className="w-full pl-11 pr-4 py-3.5 bg-earth-card border border-earth-dark/10 rounded-2xl text-earth-brown font-bold focus:outline-none focus:border-earth-primary focus:bg-earth-card-alt transition-all shadow-inner" 

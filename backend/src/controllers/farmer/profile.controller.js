@@ -34,7 +34,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, location, phone } = req.body;
+    const { name, location, phone, email } = req.body;
     
     if (!name || !location) {
       return res.status(400).json({ success: false, message: 'Name and location are required' });
@@ -42,7 +42,7 @@ export const updateProfile = async (req, res) => {
 
     const updatedFarmer = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name, location, phone }
+      data: { name, location, phone, email }
     });
 
     res.json({
@@ -51,7 +51,8 @@ export const updateProfile = async (req, res) => {
       data: {
         name: updatedFarmer.name,
         location: updatedFarmer.location,
-        phone: updatedFarmer.phone
+        phone: updatedFarmer.phone,
+        email: updatedFarmer.email
       }
     });
   } catch (error) {

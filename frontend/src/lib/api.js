@@ -1,6 +1,8 @@
 // Base URL for the backend API
 //  const API_URL = 'https://tracktor-production.up.railway.app/api';
 
+// const API_URL = 'https://tractor-bakend-production.up.railway.app/api';
+
 const API_URL = 'http://localhost:5000/api'
 //
 /**
@@ -36,10 +38,10 @@ async function fetchAPI(endpoint, options = {}) {
 // Auth API Calls
 export const api = {
   auth: {
-    login: async (email, password) => {
+    login: async (phone, password) => {
       return await fetchAPI('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phone, password }),
       });
     },
     register: async (userData) => {
@@ -220,14 +222,26 @@ export const api = {
       getRevenue: async (range = '7d') => {
         return await fetchAPI(`/admin/reports/revenue?range=${range}`);
       },
-      getServiceUsage: async () => {
-        return await fetchAPI('/admin/reports/service-usage');
+      getServiceUsage: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/service-usage?range=${range}`);
       },
       getFleet: async () => {
         return await fetchAPI('/admin/reports/fleet');
       },
-      getFarmers: async () => {
-        return await fetchAPI('/admin/reports/farmers');
+      getFarmers: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/farmers?range=${range}`);
+      },
+      getBookingsAnalytics: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/bookings-analytics?range=${range}`);
+      },
+      getOperatorPerformance: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/operator-performance?range=${range}`);
+      },
+      getJobStatusDistribution: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/job-status?range=${range}`);
+      },
+      getExportData: async (range = '7d') => {
+        return await fetchAPI(`/admin/reports/export?range=${range}`);
       }
     },
     // System Configuration

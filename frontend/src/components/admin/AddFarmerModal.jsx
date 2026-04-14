@@ -9,9 +9,8 @@ import useScrollLock from '../../hooks/useScrollLock';
 export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: '',
     phone: '',
+    password: '',
     role: 'farmer'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +45,7 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
 
   const handleClose = () => {
     setIsSuccess(false);
-    setFormData({ name: '', email: '', password: '', phone: '', role: 'farmer' });
+    setFormData({ name: '', password: '', phone: '', role: 'farmer' });
     setError('');
     onClose();
   };
@@ -102,21 +101,6 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] md:text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Email System Key</label>
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-accent transition-colors" size={16} />
-                    <Input 
-                      required
-                      type="email"
-                      placeholder="farmer@example.com" 
-                      className="pl-12 bg-earth-main border-earth-dark/10 h-11 md:h-12 focus:border-accent rounded-xl md:rounded-2xl font-bold text-sm shadow-inner transition-colors"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
                   <label className="text-[9px] md:text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Authorization Password</label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-accent transition-colors" size={16} />
@@ -132,10 +116,11 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] md:text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Phone Number (Optional)</label>
+                  <label className="text-[9px] md:text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Phone Number</label>
                   <div className="relative group">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-earth-mut group-focus-within:text-accent transition-colors" size={16} />
                     <Input 
+                      required
                       placeholder="080XXXXXXXX" 
                       className="pl-12 bg-earth-main border-earth-dark/10 h-11 md:h-12 focus:border-accent rounded-xl md:rounded-2xl font-bold text-sm shadow-inner transition-colors"
                       value={formData.phone}

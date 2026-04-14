@@ -1,7 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../lib/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext({
+  user: null,
+  isAuthenticated: false,
+  role: null,
+  login: async () => ({ success: false, message: 'Auth system not ready' }),
+  logout: async () => {},
+  register: async () => ({ success: false, message: 'Auth system not ready' }),
+  loading: true
+});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -29,9 +37,9 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (phone, password) => {
     try {
-      const response = await api.auth.login(email, password);
+      const response = await api.auth.login(phone, password);
       if (response.success) {
         const { token, user: userData } = response.data;
         localStorage.setItem('tractorlink_token', token);

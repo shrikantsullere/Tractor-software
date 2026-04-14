@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { Tractor, UserCircle, Shield, Briefcase, Lock, Mail, ArrowLeft } from 'lucide-react';
+import { Tractor, UserCircle, Shield, Briefcase, Lock, Smartphone, Mail, ArrowLeft } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { BookingProvider } from './context/BookingContext';
@@ -63,19 +63,22 @@ function ProtectedRoute({ children, allowedRole }) {
 function Login() {
   const auth = useAuth();
   const { login, isAuthenticated, user } = auth || {};
+  
+  // Debug log to catch the error if it persists
+  console.log('[Login] Auth Context:', auth);
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fillDemoCredentials = (role) => {
     const roles = {
-      admin: { email: 'admin@tractorlink.com', password: 'admin123' },
-      farmer: { email: 'farmer@tractorlink.com', password: 'farmer123' },
-      operator: { email: 'operator@tractorlink.com', password: 'operator123' }
+      admin: { phone: '08000000001', password: 'admin123' },
+      farmer: { phone: '08000000002', password: 'farmer123' },
+      operator: { phone: '08000000003', password: 'operator123' }
     };
-    setEmail(roles[role].email);
+    setPhone(roles[role].phone);
     setPassword(roles[role].password);
     // Explicitly focus a field or trigger a visual cue if needed
   };
@@ -90,7 +93,14 @@ function Login() {
     setError('');
     setIsSubmitting(true);
     
-    const result = await login(email, password);
+    if (typeof login !== 'function') {
+      console.error('[Login] login function missing from context!', auth);
+      setError('Authentication system error. Please refresh the page.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const result = await login(phone, password);
     
     if (result.success) {
       // AuthContext will update, leading to re-render and Navigate (if added in useEffect or similar)
@@ -166,16 +176,16 @@ function Login() {
             
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Email Address</label>
+                <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Phone Number</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-earth-mut"><Mail size={18} /></div>
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-earth-mut"><Smartphone size={18} /></div>
                   <input 
-                    type="email" 
+                    type="tel" 
                     required 
                     className="w-full pl-11 pr-4 py-3.5 bg-earth-card border border-earth-dark/10 rounded-2xl text-earth-brown font-bold focus:border-earth-primary focus:bg-earth-card-alt outline-none transition-all shadow-inner" 
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="08012345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
               </div>

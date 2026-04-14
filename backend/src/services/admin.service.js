@@ -134,9 +134,9 @@ export const getAllBookings = async (query = {}) => {
     
     where.OR = [
       { farmer: { name: { contains: search } } },
-      { farmer: { email: { contains: search } } },
+      { farmer: { phone: { contains: search } } },
       { service: { name: { contains: search } } },
-      { status: { contains: searchUpper } } // Search by status too (e.g. typing 'PENDING')
+      { status: { contains: searchUpper } } 
     ];
     
     if (!isNaN(searchInt)) {
@@ -243,7 +243,7 @@ export const getAllPayments = async (query = {}) => {
     const searchFilter = {
       OR: [
         { farmer: { name: { contains: search } } },
-        { farmer: { email: { contains: search } } }
+        { farmer: { phone: { contains: search } } }
       ]
     };
     if (!isNaN(searchInt)) {
@@ -606,9 +606,9 @@ export const getAllOperators = async () => {
 export const createOperator = async (operatorData) => {
   const { name, email, password, phone } = operatorData;
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findUnique({ where: { phone } });
   if (existingUser) {
-    throw new Error('Operator with this email already exists');
+    throw new Error('Operator with this phone number already exists');
   }
 
   const passwordHash = await bcrypt.hash(password, 10);

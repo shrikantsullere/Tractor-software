@@ -5,9 +5,9 @@ import prisma from '../config/db.js';
 export const registerUser = async (userData) => {
   const { name, email, password, phone, role } = userData;
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findUnique({ where: { phone } });
   if (existingUser) {
-    throw new Error('User already exists');
+    throw new Error('User with this phone number already exists');
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -24,6 +24,7 @@ export const registerUser = async (userData) => {
       id: true,
       name: true,
       email: true,
+      phone: true,
       role: true,
       status: true,
     },
@@ -32,8 +33,8 @@ export const registerUser = async (userData) => {
   return user;
 };
 
-export const loginUser = async (email, password) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+export const loginUser = async (phone, password) => {
+  const user = await prisma.user.findUnique({ where: { phone } });
 
   // status is exclusively for authentication — must be 'active' to log in
   if (!user || user.status !== 'active') {
@@ -57,6 +58,7 @@ export const loginUser = async (email, password) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
     },
   };

@@ -17,8 +17,8 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
-    const data = await authService.loginUser(email, password);
+    const { phone, password } = loginSchema.parse(req.body);
+    const data = await authService.loginUser(phone, password);
     return sendSuccess(res, data, "Login successful");
   } catch (error) {
     if (error.name === 'ZodError') {

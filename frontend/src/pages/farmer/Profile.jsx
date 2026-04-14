@@ -21,7 +21,7 @@ export default function Profile() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [editForm, setEditForm] = useState({ name: '', location: '', phone: '' });
+  const [editForm, setEditForm] = useState({ name: '', location: '', phone: '', email: '' });
   const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '' });
 
   useEffect(() => {
@@ -33,7 +33,12 @@ export default function Profile() {
       const res = await api.farmer.getProfile();
       if (res.success) {
         setFarmer(res.data);
-        setEditForm({ name: res.data.name, location: res.data.location, phone: res.data.phone || '' });
+        setEditForm({ 
+          name: res.data.name, 
+          location: res.data.location, 
+          phone: res.data.phone || '',
+          email: res.data.email || ''
+        });
       }
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -52,7 +57,13 @@ export default function Profile() {
       setIsSubmitting(true);
       const res = await api.farmer.updateProfile(editForm);
       if (res.success) {
-        setFarmer(prev => ({ ...prev, name: res.data.name, location: res.data.location, phone: res.data.phone }));
+        setFarmer(prev => ({ 
+          ...prev, 
+          name: res.data.name, 
+          location: res.data.location, 
+          phone: res.data.phone,
+          email: res.data.email 
+        }));
       }
     } catch (error) {
       alert(error.message || "Failed to update profile");
@@ -109,8 +120,8 @@ export default function Profile() {
             </div>
             
             <h1 className="text-xl md:text-2xl font-black text-earth-brown z-10 tracking-tight leading-none mb-1">{farmer.name}</h1>
-            <p className="text-[10px] text-earth-sub font-bold uppercase tracking-widest">{farmer.email}</p>
-            {farmer.phone && <p className="text-[10px] text-earth-sub font-bold uppercase tracking-widest mt-1">{farmer.phone}</p>}
+            <p className="text-[10px] text-earth-brown font-black uppercase tracking-[0.2em] mb-1">{farmer.phone}</p>
+            {farmer.email && <p className="text-[10px] text-earth-sub font-bold uppercase tracking-widest">{farmer.email}</p>}
             
             <div className="mt-6 w-full flex flex-col gap-3">
                <div className="bg-earth-card-alt/50 p-3.5 rounded-2xl flex items-center justify-center gap-2">
@@ -140,8 +151,12 @@ export default function Profile() {
                     <Input value={editForm.name} onChange={e => setEditForm(prev => ({...prev, name: e.target.value}))} className="bg-earth-card border-none h-12 rounded-xl text-sm font-bold px-4 focus:ring-2 focus:ring-earth-primary/20" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Phone Number</label>
-                    <Input value={editForm.phone} onChange={e => setEditForm(prev => ({...prev, phone: e.target.value}))} className="bg-earth-card border-none h-12 rounded-xl text-sm font-bold px-4 focus:ring-2 focus:ring-earth-primary/20" />
+                    <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Phone Number (Login ID)</label>
+                    <Input readOnly value={editForm.phone} className="bg-earth-dark/5 border-none h-12 rounded-xl text-sm font-bold px-4 cursor-not-allowed text-earth-mut" />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Email Address</label>
+                    <Input value={editForm.email} onChange={e => setEditForm(prev => ({...prev, email: e.target.value}))} placeholder="your@email.com" className="bg-earth-card border-none h-12 rounded-xl text-sm font-bold px-4 focus:ring-2 focus:ring-earth-primary/20" />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Location / Region</label>
