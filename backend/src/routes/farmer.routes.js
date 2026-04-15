@@ -45,6 +45,7 @@ router.get('/upcoming-jobs', dashboardController.getUpcomingJobs);
 // Booking routes
 router.post('/price-preview', bookingController.getPricePreview);
 router.post('/bookings', bookingController.createBooking);
+router.post('/checkout', bookingController.checkout);
 router.get('/bookings', bookingController.listBookings);
 router.get('/bookings/:id', bookingController.getBooking);
 

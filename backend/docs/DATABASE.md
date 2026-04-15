@@ -22,18 +22,21 @@ To ensure consistency and prevent case-sensitivity issues, the following rules a
 
 ```mermaid
 erDiagram
-    users ||--o{ bookings : "creates"
-    users ||--o{ tractors : "operates"
-    tractors ||--o{ bookings : "assigned_to"
+    users ||--o{ bookings : "creates (farmer)"
+    users ||--o{ bookings : "operates (operator)"
+    users ||--o| tractors : "assigned to"
+    tractors ||--o{ bookings : "used in"
     bookings ||--o{ payments : "has"
     bookings }o--|| services : "uses"
     users ||--o{ fuel_logs : "records"
+    tractors ||--o{ fuel_logs : "linked to"
+    users ||--o{ notifications : "receives"
 
     users {
         int id PK
         string name
         string email
-        string phone
+        string phone UK
         string password_hash
         string role
         string status
@@ -44,21 +47,40 @@ erDiagram
         datetime updated_at
     }
 
-    tractors {
+    services {
         int id PK
-        string name
-        string model
-        string status
-        int operator_id FK
+        string name UK
+        float base_rate_per_hectare
+        string description
+        datetime effective_date
         datetime created_at
         datetime updated_at
     }
 
-    services {
+    system_config {
         int id PK
-        string name
-        decimal base_rate_per_hectare
-        datetime effective_date
+        float diesel_price
+        float avg_mileage
+        string contact_email
+        string hub_location
+        string hub_name
+        int pre_alert_hours
+        int service_interval_hours
+        string support_email
+        float base_latitude
+        float base_longitude
+        float per_km_rate
+        string pricing_mode
+        datetime created_at
+        datetime updated_at
+    }
+
+    zones {
+        int id PK
+        float min_distance
+        float max_distance
+        float surcharge_per_hectare
+        string status
         datetime created_at
         datetime updated_at
     }
@@ -69,17 +91,29 @@ erDiagram
         int service_id FK
         float land_size
         string location
-        string service_name_snapshot
-        string hub_name
-        string hub_location
-        float hub_latitude
-        float hub_longitude
         float base_price
+        float distance_km
+        float distance_charge
+        float fuel_surcharge
         float total_price
+        float final_price
         int tractor_id FK
         int operator_id FK
         string status
+        string payment_status
+        string zone_name
+        float air_distance
+        float road_distance
+        float farmer_latitude
+        float farmer_longitude
+        float hub_latitude
+        float hub_longitude
+        string hub_location
+        string hub_name
+        string service_name_snapshot
+        datetime scheduled_at
         datetime created_at
+        datetime updated_at
     }
 
     payments {
@@ -92,6 +126,19 @@ erDiagram
         datetime created_at
     }
 
+    tractors {
+        int id PK
+        string name
+        string model
+        string status
+        int operator_id FK_UK
+        float engine_hours
+        float next_service_due_hours
+        datetime last_service_date
+        datetime created_at
+        datetime updated_at
+    }
+
     fuel_logs {
         int id PK
         int operator_id FK
@@ -102,6 +149,24 @@ erDiagram
         string receipt_url
         datetime created_at
     }
+
+    fuel_price_logs {
+        int id PK
+        float old_price
+        float new_price
+        int admin_id
+        datetime timestamp
+    }
+
+    notifications {
+        int id PK
+        int user_id FK
+        string role
+        string message
+        string type
+        boolean is_read
+        datetime created_at
+    }
 ```
 
 ---
@@ -109,235 +174,264 @@ erDiagram
 ## 3. Table Definitions
 
 ### 3.1 users
-Stores all platform users.
+Stores all platform users (farmers, admins, operators).
 
-- id: Primary Key  
-- role: farmer | admin | operator  
-- status: `active` | `inactive` → **authentication only** (determines login access)  
-- availability: `available` | `busy` → **dispatch only** (determines operator job assignment)  
-- language: `en` | `naira` → Interface language  
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| name | String | required | |
+| email | String? | optional | |
+| phone | String (Unique) | required | Used for login |
+| password_hash | String | required | bcrypt hashed |
+| role | String | `farmer` | `farmer` \| `admin` \| `operator` |
+| status | String | `active` | `active` \| `inactive` — **authentication only** |
+| availability | String | `available` | `available` \| `busy` — **dispatch only** (operators) |
+| language | String | `en` | `en` \| `naira` |
+| location | String? | optional | Farmer location text |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
-> ⚠️ RULE: `status` and `availability` must NEVER be mixed. Auth only checks `status`. Dispatch only checks `availability`.
+**Relations:**
+- `bookings` → Booking[] (as farmer, via FarmerBookings)
+- `operatorBookings` → Booking[] (as operator, via OperatorBookings)
+- `fuelLogs` → FuelLog[] (via OperatorFuelLogs)
+- `tractor` → Tractor? (1-to-1, via OperatorTractor)
+- `notifications` → Notification[] (via UserNotifications)
+
+> ⚠️ **CRITICAL RULE**: `status` and `availability` must NEVER be mixed. Auth only checks `status`. Dispatch only checks `availability`.
 
 ---
 
-- id: Primary Key  
-- name: Tractor name/identifier  
-- model: Tractor model/make  
-- status: available | busy | maintenance  
-- operator_id: Foreign Key (One-to-One with Operator)
-
----
-
-### 3.3 services
+### 3.2 services
 Defines service types and base rates.
 
-- name → plough, harrow, ridge, full  
-- base_rate_per_hectare → used in pricing  
-- effective_date → the date from which this rate is valid (supports past, present, and future)
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| name | String (Unique) | required | plough, harrow, ridge, full |
+| base_rate_per_hectare | Float | required | Used in pricing engine |
+| description | Text? | optional | Service description |
+| effective_date | DateTime | now() | Date from which rate is valid |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
 ---
 
-### 3.4 bookings (Core Table)
+### 3.3 system_config (Singleton, id=1)
+Stores global system configuration and pricing parameters.
 
-This is the central table.
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | 1 | Always 1 (singleton) |
+| diesel_price | Float | 0 | Current diesel price |
+| avg_mileage | Float | 1 | Average km/liter |
+| contact_email | String | ops@dummy.com | |
+| hub_location | String | Ludhiana Central Command | Hub address |
+| hub_name | String | TractorLink Admin HQ | Hub display name |
+| pre_alert_hours | Int | 50 | Maintenance pre-alert threshold |
+| service_interval_hours | Int | 250 | Service interval for tractors |
+| support_email | String | support@dummy.com | |
+| base_latitude | Float? | optional | Hub GPS latitude |
+| base_longitude | Float? | optional | Hub GPS longitude |
+| per_km_rate | Float | 500 | Rate per km (FUEL mode) |
+| pricing_mode | String | ZONE | `ZONE` \| `FUEL` |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
-Includes:
+---
+
+### 3.4 zones
+Distance-based pricing tiers for ZONE pricing mode.
+
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| min_distance | Float | required | Minimum km for this tier |
+| max_distance | Float? | optional | NULL = open-ended (last tier) |
+| surcharge_per_hectare | Float | required | Extra charge per hectare for this zone |
+| status | String | ACTIVE | `ACTIVE` \| `INACTIVE` |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
+
+---
+
+### 3.5 bookings (Core Table)
+
+This is the central table of the system.
 
 #### Input Data
-- farmer_id
-- service_id
-- land_size
-- location
+| Column | Type | Notes |
+|:---|:---|:---|
+| farmer_id | Int (FK) | Links to users |
+| service_id | Int (FK) | Links to services |
+| land_size | Float | Hectares |
+| location | String | Address text |
+
+#### Farmer GPS Coordinates
+| Column | Type | Notes |
+|:---|:---|:---|
+| farmer_latitude | Float? | GPS lat |
+| farmer_longitude | Float? | GPS lng |
 
 #### Historical Snapshots (Quote Integrity)
-- service_name_snapshot → The name of the service at booking time
-- hub_name → Name of the operational hub at booking time
-- hub_location → Address/Description of the hub at booking time
-- hub_latitude / hub_longitude → Coordinates of the hub at booking time
+| Column | Type | Notes |
+|:---|:---|:---|
+| service_name_snapshot | String? | Service name at booking time |
+| hub_name | String? | Hub name at booking time |
+| hub_location | String? | Hub address at booking time |
+| hub_latitude | Float? | Hub GPS lat at booking time |
+| hub_longitude | Float? | Hub GPS lng at booking time |
 
 #### Pricing Breakdown
-- base_price
-- distance_km
-- distance_charge
-- fuel_surcharge
-- total_price
-- final_price
+| Column | Type | Notes |
+|:---|:---|:---|
+| base_price | Float | service.rate × landSize |
+| distance_km | Float | Road distance in km |
+| distance_charge | Float | Zone/fuel surcharge |
+| fuel_surcharge | Float | 0 (reserved, not used) |
+| total_price | Float | base_price + distance_charge |
+| final_price | Float | = total_price (no adjustments) |
+| zone_name | String? | Matched zone label |
+| air_distance | Float | Haversine distance |
+| road_distance | Float | air_distance × 1.3 |
 
 #### Assignment
-- tractor_id
-- operator_id
+| Column | Type | Notes |
+|:---|:---|:---|
+| tractor_id | Int? (FK) | Assigned tractor |
+| operator_id | Int? (FK) | Assigned operator |
 
-| status | String | `pending` | `pending`, `scheduled`, `dispatched`, `en_route`, `in_progress`, `completed`, `paid`, `cancelled` |
-| scheduledAt | DateTime? | - | Explicit date/time set by Admin during Review |
-| paymentStatus | String | `PENDING` | `PENDING`, `PARTIAL`, `PAID` |
-| createdAt | DateTime | `now()` | - |
+#### Status & Scheduling
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| status | String | `pending` | `PENDING`, `SCHEDULED`, `ASSIGNED`, `IN_PROGRESS`, `COMPLETED` |
+| payment_status | String | `pending` | `PENDING`, `PARTIAL`, `PAID` (independent of status) |
+| scheduled_at | DateTime? | - | Set by Admin during scheduling |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
----
-
-### 3.5 payments
-
-Tracks financial transactions.
-
-- booking_id → linked to booking  
-- amount → numerical amount paid
-- method → cash | mobile_money | bank_transfer | admin_settlement
-- status → pending | partial | full (Represents coverage for this specific record)
+> ⚠️ **IMPORTANT**: `status` (work lifecycle) and `payment_status` (financial tracking) are **decoupled**. A booking can be `COMPLETED` with `paymentStatus: PENDING`. There is no `PAID` booking status.
 
 ---
 
-### 3.6 fuel_logs
+### 3.6 payments
+Tracks financial transactions per booking.
 
-Tracks fuel consumption and expenditures.
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| booking_id | Int (FK) | required | Links to bookings |
+| amount | Float | required | Payment amount |
+| method | String | `cash` | `cash` \| `online` \| `mobile_money` \| `bank_transfer` \| `admin_settlement` |
+| reference | String? | optional | Payment reference |
+| status | String | `full` | `pending` \| `partial` \| `full` (per-record coverage) |
+| created_at | DateTime | now() | |
 
-- operator_id → linked to users (operator role)
-- tractor_id → linked to tractors (optional)
-- liters → amount of fuel in liters
-- cost → total cost paid
-- station → name of the fuel station
-- receipt_url → link to uploaded receipt (optional)
-
----
-
-### 3.7 system_settings
-
-Stores dynamic pricing configuration.
-
-- base_distance_km  
-- price_per_km  
-- fuel_price  
-- minimum_charge  
+- Multiple payments per booking are supported
+- Booking `paymentStatus` is recalculated from sum of payment amounts
 
 ---
 
-## 4. Prisma Schema Example
+### 3.7 tractors
+Fleet inventory with maintenance tracking.
 
-```prisma
-model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  phone        String?
-  passwordHash String   @map("password_hash")
-  role         String   @default("farmer")      // farmer | admin | operator
-  status       String   @default("active")       // active | inactive — ONLY for authentication
-  availability String   @default("available")    // available | busy — ONLY for operator dispatch
-  language     String   @default("en")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| name | String | required | Tractor identifier |
+| model | String? | optional | Make/model |
+| status | String | `AVAILABLE` | `AVAILABLE` \| `IN_USE` \| `MAINTENANCE` |
+| operator_id | Int? (FK, Unique) | optional | 1-to-1 with operator |
+| engine_hours | Float | 0 | Total runtime hours |
+| next_service_due_hours | Float | 250 | Service threshold |
+| last_service_date | DateTime? | optional | |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
-  @@map("users")
-}
+- Auto-maintenance: status set to `MAINTENANCE` when `(nextServiceDueHours - engineHours) ≤ 50`
+- `operator_id` is unique — enforces 1-to-1 tractor-operator mapping
 
-model Tractor {
-  id          Int      @id @default(autoincrement())
-  name        String
-  model       String?
-  status      String   @default("available")
-  operatorId  Int?     @unique @map("operator_id")
+---
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+### 3.8 fuel_logs
+Tracks operator fuel consumption and expenses.
 
-  @@map("tractors")
-}
+| Column | Type | Notes |
+|:---|:---|:---|
+| id | Int (PK) | |
+| operator_id | Int (FK) | Links to users (operator) |
+| tractor_id | Int? (FK) | Links to tractors (optional) |
+| liters | Float | Fuel amount in liters |
+| cost | Float | Total cost paid |
+| station | String | Fuel station name |
+| receipt_url | String? | Upload link (optional) |
+| created_at | DateTime | |
 
-model Service {
-  id                  Int       @id @default(autoincrement())
-  name                String    @unique
-  baseRatePerHectare  Float     @map("base_rate_per_hectare")
-  effectiveDate       DateTime  @default(now()) @map("effective_date")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  bookings            Booking[]
+---
 
-  @@map("services")
-}
+### 3.9 fuel_price_logs
+Audit trail for diesel price changes.
 
-model Booking {
-  id              Int      @id @default(autoincrement())
-  farmerId        Int      @map("farmer_id")
-  serviceId       Int      @map("service_id")
+| Column | Type | Notes |
+|:---|:---|:---|
+| id | Int (PK) | |
+| old_price | Float | Previous diesel price |
+| new_price | Float | New diesel price |
+| admin_id | Int | Admin who made the change |
+| timestamp | DateTime | When the change was made |
 
-  landSize        Float    @map("land_size")
-  location        String
+---
 
-  basePrice       Float    @map("base_price")
-  distanceKm      Float    @map("distance_km")
-  distanceCharge  Float    @map("distance_charge")
-  fuelSurcharge   Float    @map("fuel_surcharge")
-  totalPrice      Float    @map("total_price")
-  finalPrice      Float    @map("final_price")
+### 3.10 notifications
+System-wide notification storage.
 
-  // Historical Snapshots
-  serviceNameSnapshot String? @map("service_name_snapshot")
-  hubName             String? @map("hub_name")
-  hubLocation         String? @map("hub_location")
-  hubLatitude         Float?  @map("hub_latitude")
-  hubLongitude        Float?  @map("hub_longitude")
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| user_id | Int (FK) | required | Target user |
+| role | String | required | `admin` \| `farmer` \| `operator` |
+| message | Text | required | Notification message |
+| type | String | required | `booking` \| `assignment` \| `tracking` \| `payment` |
+| is_read | Boolean | false | Read status |
+| created_at | DateTime | now() | |
 
-  tractorId       Int?     @map("tractor_id")
-  operatorId      Int?     @map("operator_id")
+---
 
-  status          String   @default("scheduled")
-  paymentStatus   String   @default("PENDING") @map("payment_status") // PENDING | PARTIAL | PAID
+## 4. Current Prisma Schema
 
-  payments        Payment[]
+The actual Prisma schema (`prisma/schema.prisma`) includes:
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@map("bookings")
-}
-
-model Payment {
-  id            Int      @id @default(autoincrement())
-  bookingId     Int      @map("booking_id")
-  amount        Float
-  method        String   @default("cash") // cash, mobile_money, admin_settlement
-  reference     String?
-  status        String   @default("full") // pending, partial, full
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  booking       Booking  @relation(fields: [bookingId], references: [id])
-
-  @@map("payments")
-}
-
-model FuelLog {
-  id          Int      @id @default(autoincrement())
-  operatorId  Int      @map("operator_id")
-  tractorId   Int?     @map("tractor_id")
-  liters      Float
-  cost        Float
-  station     String
-  receiptUrl  String?  @map("receipt_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  operator    User     @relation("OperatorFuelLogs", fields: [operatorId], references: [id])
-
-  @@map("fuel_logs")
-}
-
-```
+- **9 Models**: User, Service, SystemConfig, Zone, Booking, Payment, Tractor, FuelLog, FuelPriceLog, Notification
+- **Database**: MySQL
+- **All field mappings**: camelCase → snake_case via `@map`
+- **All table mappings**: PascalCase → snake_case via `@@map`
+- **Foreign key indexes**: Defined on all relation fields
+- **Unique constraints**: User.phone, Service.name, Tractor.operatorId
 
 ---
 
 ## 5. Critical Database Rules
 
-1. Pricing must always be stored in DB (never rely on frontend)  
-2. Booking is the central entity  
-3. Status must follow strict lifecycle (FLOW.md)  
-4. Use Decimal(10,2) for all money fields  
-5. Always store assignment (tractor + operator)  
-6. No business logic in database layer  
+1. Pricing must always be stored in DB (never rely on frontend)
+2. Booking is the central entity — all operations revolve around it
+3. Status must follow strict lifecycle (see FLOW.md)
+4. `status` (work) and `paymentStatus` (financial) are **decoupled** — never mix them
+5. `User.status` (auth) and `User.availability` (dispatch) are **decoupled** — never mix them
+6. Always store assignment (tractor + operator) in booking record
+7. No business logic in database layer — all logic in services
+8. Historical snapshots must be preserved — never recalculate from current config
+9. Atomic transactions for state changes (assignment, completion)
+10. Tractor-operator mapping is 1-to-1 (enforced by unique constraint on `operator_id`)
 
 ---
 
 ## 6. Notes
 
-- Operators and tractors are pre-seeded in the system  
-- Dispatch is auto-handled by backend  
-- Schema is designed for future expansion (without breaking existing logic)  
+- Operators and tractors require admin enrollment
+- Farmers self-register via public API
+- Schema is designed for future expansion (without breaking existing logic)
+- Zone status supports soft-delete (ACTIVE/INACTIVE)
+- SystemConfig is a singleton (id=1)
+- `fuel_surcharge` field exists on bookings for schema compatibility but is always 0
 
 ---

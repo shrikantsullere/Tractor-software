@@ -70,6 +70,51 @@ export const createBooking = async (req, res) => {
 };
 
 /**
+ * Atomic checkout for a new booking with simulation of successful payment.
+ */
+export const checkout = async (req, res) => {
+  try {
+    const validatedData = bookingCreateSchema.parse(req.body);
+    const farmerId = req.user.id;
+    
+    // Simulate successful payment validation here
+    // In a real flow, you would verify a gateway transaction reference.
+    
+    const result = await BookingService.createBookingWithInitialPayment(farmerId, validatedData);
+    
+    const formattedBooking = {
+      ...result,
+      formattedTotalPrice: formatCurrency(result.totalPrice),
+      formattedPaidAmount: formatCurrency(result.paidAmount)
+    };
+    
+    // Trigger Notifications
+    const io = req.app.get('io');
+    
+    // 1. Notify Admin about new booking
+    NotificationService.notifyAdmins(io, {
+      message: "New booking confirmed via checkout",
+      type: "booking",
+      metadata: { bookingId: result.id, farmerId }
+    });
+    
+    // 2. Notify Admin about payment
+    NotificationService.notifyAdmins(io, {
+      message: `Initial payment received: ${formattedBooking.formattedPaidAmount}`,
+      type: "payment",
+      metadata: { bookingId: result.id, amount: result.paidAmount, farmerId }
+    });
+
+    return sendSuccess(res, formattedBooking, "Booking and payment confirmed successfully", 201);
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return sendError(res, error.issues[0].message, 400, "VALIDATION_ERROR");
+    }
+    return sendError(res, error.message, 500);
+  }
+};
+
+/**
  * List all bookings for the logged-in farmer.
  */
 export const listBookings = async (req, res) => {

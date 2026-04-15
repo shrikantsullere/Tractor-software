@@ -131,27 +131,31 @@ export default function Payments() {
     <div className="space-y-6 md:space-y-8 max-w-[1600px] mx-auto pb-8">
       
       {/* Detail Modal Overlay */}
-      {selectedBooking && createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
-          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" 
-              onClick={() => setSelectedBooking(null)}
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative text-left z-10 w-full max-w-xl bg-earth-card border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden"
-            >
+      {createPortal(
+        <AnimatePresence>
+          {selectedBooking && (
+            <div className="fixed inset-0 z-[9999] overflow-y-auto scrollbar-hide" key="admin-payment-modal-portal">
+              <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl" 
+                  onClick={() => setSelectedBooking(null)}
+                />
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="relative text-left z-10 w-full max-w-xl bg-earth-card border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden my-auto"
+                >
               <div className="p-6 md:p-8 border-b border-earth-dark/10 flex justify-between items-center bg-white/50">
                 <h3 className="text-xl md:text-2xl font-black text-earth-brown uppercase tracking-tight italic">Transaction Details</h3>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedBooking(null)} className="h-10 w-10 text-earth-mut hover:text-earth-brown hover:bg-earth-card-alt rounded-xl transition-all">
                   <X size={20} />
                 </Button>
               </div>
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-8 space-y-6 overflow-y-auto max-h-[70vh] md:max-h-none custom-scrollbar">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Ledger ID</p>
@@ -205,9 +209,11 @@ export default function Payments() {
                    <p className="text-[9px] font-bold text-earth-mut uppercase tracking-widest text-center">This transaction is managed via secure digital gateway.</p>
                 </div>
               </CardContent>
-            </motion.div>
-          </div>
-        </div>,
+                </motion.div>
+              </div>
+            </div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
       

@@ -18,7 +18,7 @@ export default function Payments() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedTx, setSelectedTx] = useState(null);
-  const [paymentPortal, setPaymentPortal] = useState({ open: false, type: '', amount: 0, targetId: null });
+  const [paymentPortal, setPaymentPortal] = useState({ open: false, type: '', amount: 0, targetId: null, bookingData: null });
   const [paymentStep, setPaymentStep] = useState('method'); // method | processing | success
 
   // Lock background scroll when any modal is open
@@ -52,11 +52,27 @@ export default function Payments() {
         open: true,
         type: serviceType ? `Payment for ${serviceType}` : 'Initial Payment',
         amount: parseFloat(prefillAmount),
-        targetId: parseInt(prefillId)
+        targetId: parseInt(prefillId),
+        bookingData: null
       });
       setPaymentStep('method');
     }
-  }, [location.search]);
+
+    // Handle NEW BOOKING checkout from state
+    if (location.state?.paymentMode === 'CHECKOUT' && location.state?.bookingData) {
+      setPaymentPortal({
+        open: true,
+        type: `Confirm ${location.state.displayService} Booking`,
+        amount: parseFloat(location.state.displayAmount),
+        targetId: 'NEW_BOOKING',
+        bookingData: location.state.bookingData
+      });
+      setPaymentStep('method');
+      
+      // Clear location state after picking it up to avoid re-triggering on page refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.search, location.state]);
 
   const handlePayFull = () => {
     setPaymentPortal({ open: true, type: 'Full Settlement', amount: pendingData.totalOutstanding, targetId: 'ALL' });
@@ -71,6 +87,9 @@ export default function Payments() {
         // Full settlement logic now individual to ensure consistency
         alert('Bulk settlement is temporarily disabled. Please pay individual bookings.');
         return;
+      } else if (paymentPortal.targetId === 'NEW_BOOKING') {
+        // THIS IS THE NEW ATOMIC CHECKOUT FLOW
+        await api.farmer.checkout(paymentPortal.bookingData);
       } else {
         await api.payments.payBooking({
           bookingId: paymentPortal.targetId,
@@ -336,16 +355,21 @@ export default function Payments() {
                 </div>
               )}
 
-              {paymentStep === 'success' && (
+               {paymentStep === 'success' && (
                 <div className="p-10 text-center space-y-6">
                    <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/20">
                       <CheckCircle size={32} strokeWidth={2.5} />
                    </div>
                    <div>
-                     <h3 className="text-xl font-black text-earth-brown italic">Payment Done</h3>
+                     <h3 className="text-xl font-black text-earth-brown italic">
+                       {paymentPortal.targetId === 'NEW_BOOKING' ? 'Booking Confirmed' : 'Payment Done'}
+                     </h3>
                      <p className="text-[10px] text-earth-mut font-bold mt-1 uppercase tracking-widest">Transfer Verified</p>
                    </div>
-                   <Button onClick={() => setPaymentPortal({ ...paymentPortal, open: false })} className="w-full h-12 bg-earth-card-alt text-earth-brown font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-earth-card">Done</Button>
+                   <Button onClick={() => {
+                     setPaymentPortal({ ...paymentPortal, open: false });
+                     window.scrollTo(0, 0);
+                   }} className="w-full h-12 bg-earth-card-alt text-earth-brown font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-earth-card">Done</Button>
                 </div>
               )}
             </motion.div>

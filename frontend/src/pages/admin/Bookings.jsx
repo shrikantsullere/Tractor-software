@@ -364,7 +364,7 @@ export default function Bookings() {
       {createPortal(
         <AnimatePresence>
           {isViewModalOpen && selectedBooking && (
-            <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide" key="admin-booking-modal-portal">
+            <div className="fixed inset-0 z-[9999] overflow-y-auto scrollbar-hide" key="admin-booking-modal-portal">
               <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
                 {/* Backdrop Lock with separate dark overlay */}
                 <motion.div 
@@ -379,7 +379,7 @@ export default function Bookings() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="relative text-left w-full max-w-[500px] md:max-w-xl bg-white border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden z-10 max-h-[85vh] sm:max-h-[90vh] my-auto"
+                className="relative text-left w-full max-w-[500px] md:max-w-xl bg-white border border-earth-dark/15 rounded-2xl md:rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden z-10 my-auto"
               >
                 {/* Modal Header - Operational Context */}
                 <div className="p-5 md:p-6 border-b border-earth-dark/10 flex items-center justify-between bg-earth-main/10 shrink-0">
@@ -395,8 +395,8 @@ export default function Bookings() {
                   </button>
                 </div>
 
-                {/* Modal Content - Scroll-Free Optimization */}
-                <div className="p-5 md:p-6 space-y-5 text-left overflow-y-auto">
+                {/* Modal Content */}
+                <div className="p-5 md:p-6 space-y-5 text-left overflow-y-auto max-h-[70vh] md:max-h-none custom-scrollbar">
                   {/* 1. Location Details */}
                   <div className="space-y-3">
                     <h4 className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em] px-1 flex items-center gap-2">
@@ -453,6 +453,33 @@ export default function Bookings() {
                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-earth-primary italic">Total</span>
                           <span className="text-lg font-black text-earth-brown tracking-tighter italic">{formatCurrency(selectedBooking.totalPrice || 0)}</span>
                         </div>
+                        {(() => {
+                           const paidAmount = selectedBooking.payments?.reduce((s, p) => s + p.amount, 0) || 0;
+                           const remainingAmount = Math.max((selectedBooking.totalPrice || 0) - paidAmount, 0);
+                           const pStatus = selectedBooking.paymentStatus || 'PENDING';
+                           return (
+                             <>
+                               <div className="h-px bg-earth-dark/5 my-1" />
+                               <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest pt-1">
+                                 <span className="text-earth-mut">Paid Amount</span>
+                                 <span className="text-earth-green">{formatCurrency(paidAmount)}</span>
+                               </div>
+                               <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
+                                 <span className="text-earth-mut">Remaining</span>
+                                 <span className="text-orange-500">{formatCurrency(remainingAmount)}</span>
+                               </div>
+                               <div className="mt-2 flex justify-between items-center pt-2 border-t border-earth-dark/5">
+                                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-earth-mut">Payment Status</span>
+                                 <Badge className={cn(
+                                   "text-[8px] px-2 py-0 border font-black uppercase tracking-widest",
+                                   pStatus === 'PAID' || pStatus === 'full' ? 'bg-earth-primary/20 text-earth-green border-emerald-500/40' :
+                                   pStatus === 'PARTIAL' || pStatus === 'partial' ? 'bg-blue-500/10 text-blue-400 border-blue-500/40' : 
+                                   'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                 )}>{pStatus}</Badge>
+                               </div>
+                             </>
+                           );
+                        })()}
                     </div>
                   </div>
 

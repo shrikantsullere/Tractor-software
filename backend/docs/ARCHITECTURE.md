@@ -10,23 +10,33 @@ The architecture ensures:
 - Clear separation of concerns
 - Maintainability and scalability
 - Consistent coding standards
+- Real-time communication via Socket.IO
+- Persistent notification system
 
 ---
 
 ## 2. Tech Stack
 
-- Runtime: Node.js
+- Runtime: Node.js (ES Modules)
 - Framework: Express.js
 - ORM: Prisma ORM
 - Database: MySQL
 - Authentication: JWT (JSON Web Tokens)
 - Validation: Zod (Schema validation)
+- Real-Time: Socket.IO (HTTP server + WebSocket)
+- Password Hashing: bcryptjs
 
 ---
 
 ## 3. Architecture Pattern
 
+```
 Client → Routes → Controllers → Services → Database (Prisma)
+                                    ↕
+                            Socket.IO (Real-Time)
+                                    ↕
+                          Notification Service
+```
 
 Each layer has a clearly defined responsibility.
 
@@ -34,19 +44,56 @@ Each layer has a clearly defined responsibility.
 
 ## 4. Directory Structure
 
+```
 backend/
-├── src/                # Core application source
-│   ├── controllers/    # Request handlers
-│   ├── routes/         # API endpoints
-│   ├── services/       # Business logic (Core)
-│   ├── middleware/     # Auth & validation
-│   ├── config/         # System configuration
-│   └── prisma/         # Prisma client
-├── docs/               # System documentation (.md)
-├── scripts/            # Maintenance & test scripts
-├── prisma/             # Database schema & migrations
-├── .env                # Environment variables
-└── package.json        # Dependencies
+├── src/                      # Core application source
+│   ├── controllers/          # Request handlers
+│   │   ├── admin/            # Admin controllers (admin, assignment, dashboard, dispatch, report, settings)
+│   │   ├── auth/             # Authentication controller
+│   │   ├── farmer/           # Farmer controllers (booking, dashboard, payment, profile, service)
+│   │   ├── operator/         # Operator controllers (fuel, job, profile)
+│   │   ├── notification.controller.js
+│   │   └── request.controller.js
+│   ├── routes/               # API endpoints
+│   │   ├── admin.routes.js
+│   │   ├── auth.routes.js
+│   │   ├── farmer.routes.js
+│   │   ├── notification.routes.js
+│   │   ├── operator.routes.js
+│   │   ├── payment.routes.js
+│   │   └── request.routes.js
+│   ├── services/             # Business logic (Core)
+│   │   ├── admin.service.js         # Booking mgmt, dispatch, fleet, operators, farmers, dashboard
+│   │   ├── auth.service.js          # Registration, login, user lookup
+│   │   ├── booking.service.js       # Pricing engine, booking CRUD
+│   │   ├── farmer.service.js        # Farmer dashboard metrics, activity, jobs
+│   │   ├── fuel.service.js          # Operator fuel logging
+│   │   ├── notification.service.js  # Real-time + persistent notifications
+│   │   ├── operator.service.js      # Job lifecycle, stats
+│   │   ├── payment.service.js       # Farmer payments, ledger
+│   │   ├── report.service.js        # Analytics & reports
+│   │   └── settings.service.js      # System config, zones, services
+│   ├── schema/               # Zod validation schemas
+│   │   ├── auth.schema.js
+│   │   ├── booking.schema.js
+│   │   └── farmer.schema.js
+│   ├── middleware/            # Auth & validation
+│   │   └── auth.middleware.js
+│   ├── config/               # System configuration
+│   │   └── db.js             # Prisma client singleton
+│   ├── utils/                # Utility functions
+│   │   ├── format.js         # Currency formatting
+│   │   └── response.js       # Standard API response helpers
+│   └── index.js              # Server entry point (Express + Socket.IO)
+├── docs/                     # System documentation (.md)
+├── prisma/                   # Database schema & migrations
+│   ├── schema.prisma
+│   ├── seed.js
+│   └── migrations/
+├── scripts/                  # Maintenance & test scripts
+├── .env                      # Environment variables
+└── package.json              # Dependencies
+```
 
 ---
 
@@ -57,6 +104,7 @@ backend/
 - Connects routes to controllers
 - Applies middleware (auth, role check)
 - No business logic allowed
+- 7 route modules: auth, farmer, admin, operator, payment, request, notification
 
 ---
 
@@ -66,8 +114,10 @@ backend/
   - req.body
   - req.params
   - req.query
+  - req.user (injected by auth middleware)
 - Calls services to perform operations
-- Returns formatted API response
+- Returns formatted API response using `sendSuccess` / `sendError`
+- May trigger notifications via NotificationService (async, non-blocking)
 - No database queries here
 
 ---
@@ -78,61 +128,85 @@ This is the most important layer.
 
 Responsibilities:
 - Business logic implementation
-- Pricing calculation
-- Dispatch logic
-- Scheduling logic
+- Pricing calculation (zone-based and fuel-based)
+- Dispatch logic (scheduling + assignment)
 - Status transition validation
+- Resource locking/release (atomic transactions)
+- Historical data snapshotting
 
 Rules:
 - Prisma is used only here
 - Functions must be reusable
 - Keep logic modular
 
+**10 Service Modules:**
+
+| Service | Responsibility |
+|:---|:---|
+| `admin.service.js` | Booking management, operator dispatch, fleet monitoring, farmer/operator management, dashboard metrics |
+| `auth.service.js` | User registration, login authentication, user lookup |
+| `booking.service.js` | Price calculation engine, booking CRUD, farmer booking queries |
+| `farmer.service.js` | Farmer dashboard metrics, recent activity, upcoming jobs |
+| `fuel.service.js` | Operator fuel log CRUD, consumption summary |
+| `notification.service.js` | Persistent + real-time notification delivery (class-based) |
+| `operator.service.js` | Job lifecycle management, stats, status transitions |
+| `payment.service.js` | Farmer payment processing, pending dues, payment history |
+| `report.service.js` | Revenue, service usage, bookings analytics, operator performance, fleet, farmer growth, export |
+| `settings.service.js` | System config CRUD, zone management, service rate management |
+
 ---
 
 ### Prisma Layer
-- Defines database schema
-- Handles all DB queries
+- Defines database schema in `prisma/schema.prisma`
+- Handles all DB queries via Prisma Client
 - Accessed only through services
+- Singleton instance in `src/config/db.js`
 
 ---
 
 ### Middleware Layer
-- Authentication (JWT)
-- Role-based authorization
-- Error handling
-- Request validation (Zod)
+- **Authentication** (`verifyToken`): JWT verification + DB user lookup + active status check
+- **Role-based authorization** (`requireRole`): Array of allowed roles
+- Applied at route level, not controller level
 
 ---
 
-## 6. Core Service Modules
+### Notification Layer
+- Class-based service (`NotificationService`)
+- Two methods: `notifyAdmins(io, payload)` and `notifyUser(io, userId, role, payload)`
+- Persists notifications in DB via `prisma.notification.createMany` / `create`
+- Broadcasts via Socket.IO to role-specific rooms
+- Called asynchronously from controllers (fire-and-forget, errors caught silently)
 
-### Admin Service
-- **Manual Dispatch**: Assign resources to pending jobs.
-- **Transactional Settlement**: Create payment record + update status.
-- **Unified Ledger**: Aggregate payments and dues for revenue tracking.
-- **Operator Enrollment**: Secure creation and decommissioning of operator accounts.
+---
 
-### Operator Service
-- **Job Lifecycle**: Manage transitions (en_route → in_progress → completed).
-- **Resource Recovery**: Release tractor/operator on job completion.
-- **Profile Independence**: Managing personal contact data and interface settings.
+## 6. Server Entry Point (`src/index.js`)
 
-### Booking & Pricing Service
-- Create booking and calculate estimated price.
-- **Historical Snapshots**: Capture and store current hub/service state in the `Booking` record at creation for consistent "Quote" views.
+The entry point sets up:
+1. Express app with CORS and JSON middleware
+2. HTTP server wrapping Express
+3. Socket.IO server with CORS configuration
+4. In-memory `roomsState` Map for tracking state
+5. All 7 route modules mounted under `/api/`
+6. Socket.IO event handlers:
+   - `tracking:join` — room management
+   - `location:update` — operator GPS broadcasting
+   - `farmer:destination:update` — farmer location broadcasting
+7. Global error handler and 404 handler
 
 ---
 
 ## 7. Core System Rules
 
 ### No Logic in Routes
-Routes should only map endpoints to controllers.
+Routes should only map endpoints to controllers and apply middleware.
 
 ### Controllers Are Thin
 Controllers only:
 - Receive request
+- Validate input (Zod where applicable)
 - Call service
+- Trigger notifications (async)
 - Send response
 
 ### Services Contain All Logic
@@ -141,18 +215,20 @@ All business rules must be implemented in services.
 ### Database Access Rule
 - Prisma queries only inside services
 - Never in controllers or routes
+- **Exception**: `notification.controller.js` and `request.controller.js` access Prisma directly (legacy pattern — should be refactored)
 
-### Historical Consistency Rule (NEW)
+### Historical Consistency Rule
 - Critical metadata like Hub Name, Hub Location, and Hub Coordinates must be "snapshotted" in the Booking record at creation time.
-- This ensures that old quotes remain accurate for audit and invoice purposes even if global settings (like hub address) change.
-- Never recalculate historical pricing or locations using current master data; always use the stored snapshots.
+- This ensures that old quotes remain accurate even if global settings change.
+- Never recalculate historical pricing or locations using current master data.
 
 ### Status Control Rule
 Booking status must follow strict order:
 
-Scheduled → Dispatched → En Route → In Progress → Completed → Paid
+**PENDING → SCHEDULED → ASSIGNED → IN_PROGRESS → COMPLETED**
 
-Invalid transitions must be blocked.
+- `paymentStatus` (PENDING | PARTIAL | PAID) is tracked independently
+- Invalid transitions must be blocked with `INVALID_TRANSITION` error
 
 ---
 
@@ -166,82 +242,126 @@ Invalid transitions must be blocked.
 
 ### Standard Response Format
 
+```json
 {
   "success": true,
   "data": {},
   "message": "Success"
 }
+```
 
 ### Error Response
 
+```json
 {
   "success": false,
   "error": "ERROR_CODE",
   "message": "Error message"
 }
+```
+
+### Pagination Pattern
+Used in: Admin Bookings, Admin Payments, Farmer Bookings
+```json
+{
+  "data": [...],
+  "totalPages": 5,
+  "currentPage": 1,
+  "totalCount": 40
+}
+```
 
 ---
 
 ## 9. Authentication & Authorization
 
-- JWT-based authentication
+- JWT-based authentication (7-day token expiry)
+- **Phone-based login** (not email)
 - Role-based access control:
   - Farmer
   - Admin
   - Operator
 
 Middleware must:
-- Verify token
-- Attach user to request
-- Check role permissions
+- Verify JWT token
+- Look up user in database
+- Check `status === 'active'` (inactive users blocked)
+- Attach user object to `req.user`
+- Check role permissions via `requireRole()`
 
 ---
 
 ## 10. Validation Strategy
 
 - Use Zod schemas for request validation
-- Validate:
-  - Body
-  - Params
-  - Query
-
-Invalid requests should be rejected before reaching services.
+- Current schemas:
+  - `auth.schema.js` — register (name, phone, email?, password, role) and login (phone, password)
+  - `booking.schema.js` — booking creation and price preview
+  - `farmer.schema.js` — farmer status update
+- Validate: Body, Params, Query
+- Invalid requests rejected before reaching services
 
 ---
 
-## 11. Implementation Workflow
+## 11. Real-Time Architecture (Socket.IO)
+
+### Room Architecture
+| Room | Purpose | Joined By |
+|:---|:---|:---|
+| `track-booking-{bookingId}` | Private job tracking channel | Operator + Farmer |
+| `admin-tracking` | Admin overview (all operator updates) | Admin |
+| `user-{userId}` | Personal notification delivery | All users |
+| `default-room` | Legacy backward compatibility | Any |
+
+### Event Flow
+| Event | Direction | Payload |
+|:---|:---|:---|
+| `tracking:join` | Client → Server | `{ roomId, role, bookingId, operatorId, userId }` |
+| `tracking:state` | Server → Client | Current room state |
+| `location:update` | Bidirectional | `{ lat, lng, timestamp, operatorId, bookingId }` |
+| `farmer:destination:update` | Bidirectional | `{ lat, lng, bookingId }` |
+| `notification:new` | Server → Client | `{ message, type, metadata, createdAt }` |
+| `new:request` | Server → Client | Service request object |
+| `request:updated` | Server → Client | Updated request object |
+
+---
+
+## 12. Implementation Workflow
 
 1. Define models in prisma/schema.prisma
-2. Run: npx prisma generate
+2. Run: `npx prisma generate` (and `npx prisma migrate dev` for migrations)
 3. Create service logic
 4. Create controller
 5. Define route
 6. Add validation (Zod)
-7. Test endpoint
+7. Add notifications if needed
+8. Test endpoint
 
 ---
 
-## 12. Scalability Considerations
+## 13. Scalability Considerations
 
 - Modular service-based structure
 - Easy to convert into microservices
 - Add caching (Redis) in future
 - Add queue system for dispatch
+- Socket.IO can be scaled with Redis adapter
+- Notification service designed for bulk operations
 
 ---
 
-## 13. Security Standards
+## 14. Security Standards
 
-- Hash passwords using bcrypt
-- Use JWT for authentication
+- Hash passwords using bcrypt (10 salt rounds)
+- Use JWT for authentication with DB user verification on every request
 - Validate all inputs using Zod
-- Protect sensitive routes
-- Do not expose internal errors
+- Protect sensitive routes with `verifyToken` + `requireRole`
+- Check `status: active` on every authenticated request (not just login)
+- Do not expose internal errors (generic error messages in production)
+- Atomic transactions for state-changing operations (assignment, completion)
 
 ---
-
-
 
 ## Conclusion
 
-This architecture ensures a clean, scalable, and maintainable backend system with strict separation of concerns and well-defined responsibilities across all layers.
+This architecture ensures a clean, scalable, and maintainable backend system with strict separation of concerns, real-time communication capabilities, and well-defined responsibilities across all layers.

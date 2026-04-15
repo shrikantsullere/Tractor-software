@@ -203,6 +203,84 @@ export const createBookingRequest = async (farmerId, bookingData) => {
 };
 
 /**
+ * Creates a booking AND an initial payment record in a single transaction.
+ * Used for the new "Pay to Book" flow.
+ */
+export const createBookingWithInitialPayment = async (farmerId, bookingData) => {
+  const { 
+    serviceType, 
+    landSize, 
+    location, 
+    zoneId, 
+    farmerLatitude, 
+    farmerLongitude, 
+    paymentOption,
+    paymentMethod = 'online'
+  } = bookingData;
+
+  if (paymentOption === 'later') {
+    throw new Error('Digital payment is required for initial booking.');
+  }
+
+  // 1. Calculate pricing
+  const pricing = await calculateBookingPrice(serviceType, landSize, zoneId, farmerLatitude, farmerLongitude);
+
+  // 2. Determine payment amount and status
+  const totalAmount = pricing.totalPrice;
+  const paymentAmount = paymentOption === 'full' ? totalAmount : totalAmount * 0.5;
+  const finalPaymentStatus = paymentOption === 'full' ? 'PAID' : 'PARTIAL';
+
+  // 3. Execute Transaction
+  return await prisma.$transaction(async (tx) => {
+    // A. Create Booking
+    const booking = await tx.booking.create({
+      data: {
+        farmerId,
+        serviceId: pricing.serviceId,
+        landSize,
+        location,
+        basePrice: pricing.basePrice,
+        distanceKm: pricing.distanceKm,
+        distanceCharge: pricing.distanceCharge,
+        fuelSurcharge: pricing.fuelSurcharge,
+        totalPrice: pricing.totalPrice,
+        finalPrice: pricing.finalPrice,
+        zoneName: pricing.zoneName,
+        farmerLatitude,
+        farmerLongitude,
+        airDistance: pricing.airDistance,
+        roadDistance: pricing.roadDistance,
+        serviceNameSnapshot: pricing.serviceName,
+        hubName: pricing.hubName,
+        hubLocation: pricing.hubLocation,
+        hubLatitude: pricing.hubLatitude,
+        hubLongitude: pricing.hubLongitude,
+        status: 'PENDING',
+        paymentStatus: finalPaymentStatus
+      },
+      include: {
+        service: true
+      }
+    });
+
+    // B. Create Payment Record
+    await tx.payment.create({
+      data: {
+        bookingId: booking.id,
+        amount: parseFloat(paymentAmount.toFixed(2)),
+        method: paymentMethod,
+        status: 'full' // This specific payment record is considered "full" for the amount paid
+      }
+    });
+
+    return {
+      ...booking,
+      paidAmount: paymentAmount
+    };
+  });
+};
+
+/**
  * Get all bookings for a specific farmer.
  */
 export const getFarmerBookings = async (farmerId, query = {}) => {

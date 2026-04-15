@@ -126,28 +126,28 @@ export default function BookTractor() {
 
     setIsBooking(true);
     try {
-      const result = await api.farmer.createBooking({
+      const bookingData = {
         serviceType: service.toLowerCase(),
         landSize: parseFloat(landSize),
         location,
         farmerLatitude: farmerLatitude ? parseFloat(farmerLatitude) : null,
         farmerLongitude: farmerLongitude ? parseFloat(farmerLongitude) : null,
         paymentOption: selectedPaymentOption
-      });
+      };
       
-      if (result.success) {
-        addBooking(result.data);
-        const bookingId = result.data.id;
-        const prefillAmt = selectedPaymentOption === 'full' ? totalCost : totalCost * 0.5;
-        
-        // Redirect to payments with pre-fill instructions
-        navigate(`/farmer/payments?prefillId=${bookingId}&prefillAmount=${prefillAmt.toFixed(2)}&serviceType=${encodeURIComponent(service)}`);
-        
-        setLandSize('');
-        setLocation('');
-        setErrors({});
-        setBookingStep(1);
-      }
+      const prefillAmt = selectedPaymentOption === 'full' ? totalCost : totalCost * 0.5;
+      
+      // Redirect to payments with the BOOKING DATA in state
+      // This ensures nothing is created in the DB until "Pay Now" is clicked on the next page.
+      navigate(`/farmer/payments`, { 
+        state: { 
+          bookingData,
+          paymentMode: 'CHECKOUT',
+          displayAmount: prefillAmt.toFixed(2),
+          displayService: service
+        } 
+      });
+
     } catch (error) {
       setErrors({ general: error.message || "Connection failed" });
       setBookingStep(1);

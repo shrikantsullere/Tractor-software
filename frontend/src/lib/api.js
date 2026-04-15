@@ -87,6 +87,12 @@ export const api = {
         body: JSON.stringify(bookingData),
       });
     },
+    checkout: async (bookingData) => {
+      return await fetchAPI('/farmer/checkout', {
+        method: 'POST',
+        body: JSON.stringify(bookingData),
+      });
+    },
     listBookings: async (params = {}) => {
       const query = new URLSearchParams(params).toString();
       return await fetchAPI(`/farmer/bookings?${query}`);
