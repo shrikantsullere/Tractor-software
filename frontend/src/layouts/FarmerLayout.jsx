@@ -2,8 +2,8 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Home, Tractor, MapPin, Clock, CreditCard, User, LogOut, Bell, ChevronRight, Menu, ListCollapse, CheckCircle2, AlertCircle, MessageSquare, X } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { dummyFarmers } from '../data/dummyData';
 import { useAuth } from '../context/AuthContext';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 export default function FarmerLayout() {
   const location = useLocation();
@@ -14,11 +14,7 @@ export default function FarmerLayout() {
   const sidebarRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const notifications = [
-    { id: 1, title: 'Job Started', message: 'Operator has started ploughing in Plot 42', time: '2 min ago', icon: CheckCircle2, color: 'text-earth-green', unread: true },
-    { id: 2, title: 'Payment Reminder', message: 'Invoice for last week booking is generated', time: '15 min ago', icon: AlertCircle, color: 'text-red-400', unread: true },
-    { id: 3, title: 'Welcome!', message: 'Registration successful. Start booking tractors today.', time: '1 day ago', icon: MessageSquare, color: 'text-earth-primary', unread: false },
-  ];
+
 
   // Only close sidebar when route changes on mobile
   useEffect(() => {
@@ -78,7 +74,7 @@ export default function FarmerLayout() {
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[1000] animate-in fade-in duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -87,7 +83,7 @@ export default function FarmerLayout() {
       <aside 
         ref={sidebarRef}
         className={cn(
-          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-50 shadow-2xl overflow-hidden",
+          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-[1001] shadow-2xl overflow-hidden",
           isSidebarOpen ? "w-[240px] translate-x-0" : "w-[240px] -translate-x-[240px]"
         )}
       >
@@ -155,58 +151,7 @@ export default function FarmerLayout() {
           </div>
           
           <div className="flex items-center gap-5 text-sm">
-            <div ref={notificationRef} className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={cn(
-                  "relative p-2 transition-colors rounded-full",
-                  showNotifications ? "bg-earth-card-alt text-earth-primary" : "text-earth-sub hover:text-earth-primary hover:bg-earth-card-alt"
-                )}
-              >
-                <Bell size={20} strokeWidth={2.5} />
-                {notifications.some(n => n.unread) && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-neutral-900 shadow-sm"></span>
-                )}
-              </button>
-
-              {/* Notification Dropdown */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-[320px] bg-earth-card border border-earth-dark/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                  <div className="p-4 border-b border-earth-dark/10 flex items-center justify-between bg-earth-card-alt/50">
-                    <h3 className="font-black text-[10px] uppercase tracking-widest text-earth-brown">Notifications</h3>
-                    <button className="text-[9px] uppercase font-black text-earth-primary hover:text-earth-brown transition-colors">Mark all read</button>
-                  </div>
-                  <div className="max-h-[350px] overflow-y-auto scrollbar-hide">
-                    {notifications.length > 0 ? notifications.map((n) => (
-                      <div key={n.id} className={cn(
-                        "p-4 border-b border-earth-dark/10/50 hover:bg-earth-card-alt/50 transition-colors cursor-pointer group",
-                        n.unread && "bg-earth-primary/[0.02]"
-                      )}>
-                        <div className="flex gap-4">
-                          <div className={cn("w-9 h-9 rounded-xl bg-earth-card border border-earth-dark/10 flex items-center justify-center shrink-0 group-hover:border-earth-dark/15 transition-colors", n.color)}>
-                            <n.icon size={16} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-0.5">
-                              <p className="text-xs font-black text-earth-brown group-hover:text-earth-primary transition-colors">{n.title}</p>
-                              <span className="text-[9px] font-bold text-earth-mut whitespace-nowrap">{n.time}</span>
-                            </div>
-                            <p className="text-[11px] text-earth-sub leading-tight line-clamp-2 font-medium">{n.message}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="p-10 text-center">
-                        <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest">No new alerts</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3 bg-earth-card-alt/30 text-center">
-                    <button className="text-[9px] uppercase font-black text-earth-mut hover:text-earth-brown transition-colors">View all updates</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationDropdown />
 
             <div className="h-6 w-px bg-earth-card-alt"></div>
             <div className="flex items-center gap-3 cursor-pointer group">
@@ -227,7 +172,7 @@ export default function FarmerLayout() {
 
         {/* --- MOBILE BOTTOM NAVIGATION --- */}
         <nav 
-          className="md:hidden fixed bottom-0 w-full bg-earth-card bordr-t border-earth-dark/10 flex justify-around pt-3 pb-2 px-2 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+          className="md:hidden fixed bottom-0 w-full bg-earth-card bordr-t border-earth-dark/10 flex justify-around pt-3 pb-2 px-2 z-[1001] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
         >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;

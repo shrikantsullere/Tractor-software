@@ -215,7 +215,7 @@ export default function LiveTracking() {
 
       {error ? <p className="text-[11px] font-bold text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">{error}</p> : null}
       
-      <div className="h-[calc(100vh-12rem)] rounded-[2rem] overflow-hidden border border-earth-dark/10 shadow-2xl relative">
+      <div className="relative z-0 h-[calc(100vh-12rem)] rounded-[2rem] overflow-hidden border border-earth-dark/10 shadow-2xl relative">
         <MapContainer center={initialCenter} zoom={11} className="w-full h-full" scrollWheelZoom>
           <TileLayer
             attribution="&copy; OpenFreeMap contributors"

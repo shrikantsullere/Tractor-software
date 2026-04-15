@@ -1,4 +1,5 @@
 import * as operatorService from '../../services/operator.service.js';
+import NotificationService from '../../services/notification.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 
 export const getJobs = async (req, res) => {
@@ -32,6 +33,26 @@ export const updateStatus = async (req, res) => {
     }
 
     const updatedBooking = await operatorService.updateJobStatus(operatorId, bookingId, status);
+    
+    // Notification for Job Completion
+    if (status?.toUpperCase() === 'COMPLETED' && updatedBooking) {
+      const io = req.app.get('io');
+      
+      // Notify Farmer
+      NotificationService.notifyUser(io, updatedBooking.farmerId, 'farmer', {
+        message: "Your job has been completed successfully",
+        type: "tracking",
+        metadata: { bookingId: updatedBooking.id }
+      });
+
+      // Notify Admin
+      NotificationService.notifyAdmins(io, {
+        message: `Job #${updatedBooking.id} completed by operator`,
+        type: "tracking",
+        metadata: { bookingId: updatedBooking.id, operatorId }
+      });
+    }
+
     return sendSuccess(res, updatedBooking, 'Booking status updated successfully');
   } catch (error) {
     let statusCode = 400;

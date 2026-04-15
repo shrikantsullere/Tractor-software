@@ -2,7 +2,7 @@ import { cn } from '../../lib/utils';
 
 export function Card({ className, children, ...props }) {
   return (
-    <div className={cn("bg-earth-card-alt rounded-3xl border border-earth-dark/[0.05] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden group transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]", className)} {...props}>
+    <div className={cn("bg-earth-card-alt rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden group transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]", className)} {...props}>
       {children}
     </div>
   );
@@ -10,7 +10,7 @@ export function Card({ className, children, ...props }) {
 
 export function CardHeader({ className, children, ...props }) {
   return (
-    <div className={cn("px-6 py-5 border-b border-earth-dark/[0.05] flex flex-col gap-1.5", className)} {...props}>
+    <div className={cn("px-6 py-5 flex flex-col gap-1.5", className)} {...props}>
       {children}
     </div>
   );
@@ -42,7 +42,7 @@ export function CardContent({ className, children, ...props }) {
 
 export function CardFooter({ className, children, ...props }) {
   return (
-    <div className={cn("px-6 py-5 border-t border-earth-dark/[0.05] bg-earth-card/50 flex items-center", className)} {...props}>
+    <div className={cn("px-6 py-5 bg-earth-card/50 flex items-center", className)} {...props}>
       {children}
     </div>
   );

@@ -451,12 +451,7 @@ export default function BookTractor() {
                 >
                   {isBooking ? <Loader2 size={20} className="animate-spin" /> : Object.keys(errors).length > 0 ? "Check Fields" : "Continue"}
                 </Button>
-                <a 
-                  href="mailto:support@dummy.com" 
-                  className="w-full border border-earth-dark/15 hover:bg-earth-card-alt text-earth-brown h-12 rounded-xl font-black uppercase tracking-wide flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Mail size={16} /> Email Hub
-                </a>
+
               </div>
             </CardContent>
           </Card>

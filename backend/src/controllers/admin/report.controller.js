@@ -92,6 +92,19 @@ export const getJobStatusDistribution = async (req, res) => {
 };
 
 /**
+ * Get tractor wise profitability report
+ */
+export const getTractorProfitability = async (req, res) => {
+  try {
+    const { range } = req.query;
+    const report = await reportService.getTractorProfitabilityReport(range);
+    return sendSuccess(res, report, "Tractor profitability retrieved successfully");
+  } catch (error) {
+    return sendError(res, error.message, 500);
+  }
+};
+
+/**
  * Get raw data for export
  */
 export const getExportData = async (req, res) => {

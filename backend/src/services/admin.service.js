@@ -467,10 +467,10 @@ export const getDashboardAssignmentQueue = async () => {
 export const getDashboardRevenue = async (timeframe = 'daily') => {
   const recentDate = new Date();
   
-  if (timeframe === 'hourly') {
-    recentDate.setHours(recentDate.getHours() - 24); // Last 24 hours
-  } else if (timeframe === 'weekly') {
+  if (timeframe === 'weekly') {
     recentDate.setDate(recentDate.getDate() - 28); // Last 4 weeks
+  } else if (timeframe === 'monthly') {
+    recentDate.setFullYear(recentDate.getFullYear() - 1); // Last 12 months
   } else {
     recentDate.setDate(recentDate.getDate() - 7); // Last 7 days
   }
@@ -486,20 +486,23 @@ export const getDashboardRevenue = async (timeframe = 'daily') => {
     orderBy: { createdAt: 'asc' }
   });
 
-  // Use a Map to maintain chronological order from the ordered DB results
   const totals = new Map();
   
   payments.forEach(p => {
     let label = '';
     const date = new Date(p.createdAt);
     
-    if (timeframe === 'hourly') {
-      label = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: true }).format(date);
+    if (timeframe === 'monthly') {
+      label = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
     } else if (timeframe === 'weekly') {
       // Calculate how many weeks ago this payment was
-      const diffTime = Math.abs(new Date() - date);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
       const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-      label = diffWeeks === 0 ? 'This Wk' : `${diffWeeks}W Ago`;
+      
+      if (diffWeeks === 0) label = 'This Wk';
+      else if (diffWeeks === 1) label = 'Last Wk';
+      else label = `${diffWeeks}W Ago`;
     } else {
       label = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
     }

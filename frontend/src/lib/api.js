@@ -1,10 +1,7 @@
 // Base URL for the backend API
-//  const API_URL = 'https://tracktor-production.up.railway.app/api';
-
-// const API_URL = 'https://tractor-bakend-production.up.railway.app/api';
-
 const API_URL = 'http://localhost:5000/api'
-//
+// const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
+
 /**
  * Standard fetch wrapper that automatically injects the Authorization header
  * if a token is present in localStorage.
@@ -219,29 +216,32 @@ export const api = {
       });
     },
     reports: {
-      getRevenue: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/revenue?range=${range}`);
+      getRevenue: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/revenue?range=${rangeVal}`);
       },
-      getServiceUsage: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/service-usage?range=${range}`);
+      getServiceUsage: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/service-usage?range=${rangeVal}`);
       },
       getFleet: async () => {
         return await fetchAPI('/admin/reports/fleet');
       },
-      getFarmers: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/farmers?range=${range}`);
+      getFarmers: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/farmers?range=${rangeVal}`);
       },
-      getBookingsAnalytics: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/bookings-analytics?range=${range}`);
+      getBookingsAnalytics: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/bookings-analytics?range=${rangeVal}`);
       },
-      getOperatorPerformance: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/operator-performance?range=${range}`);
+      getOperatorPerformance: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/operator-performance?range=${rangeVal}`);
       },
-      getJobStatusDistribution: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/job-status?range=${range}`);
+      getJobStatusDistribution: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/job-status?range=${rangeVal}`);
       },
-      getExportData: async (range = '7d') => {
-        return await fetchAPI(`/admin/reports/export?range=${range}`);
+      getTractorProfitability: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/tractor-profitability?range=${rangeVal}`);
+      },
+      getExportData: async (rangeVal = '7d') => {
+        return await fetchAPI(`/admin/reports/export?range=${rangeVal}`);
       }
     },
     // System Configuration
@@ -378,6 +378,30 @@ export const api = {
         method: 'PATCH',
       });
     }
+  },
+  notifications: {
+    list: async () => {
+      return await fetchAPI('/notifications');
+    },
+    markAsRead: async (id) => {
+      return await fetchAPI(`/notifications/${id}/read`, {
+        method: 'PATCH'
+      });
+    },
+    markAllAsRead: async () => {
+      return await fetchAPI('/notifications/read-all', {
+        method: 'PATCH'
+      });
+    },
+    delete: async (id) => {
+      return await fetchAPI(`/notifications/${id}`, {
+        method: 'DELETE'
+      });
+    },
+    deleteAll: async () => {
+      return await fetchAPI(`/notifications`, {
+        method: 'DELETE'
+      });
+    }
   }
 };
-

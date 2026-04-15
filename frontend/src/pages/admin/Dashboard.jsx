@@ -218,43 +218,42 @@ export default function Dashboard() {
 
       
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className={cn(
-            "relative border-none overflow-hidden hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 transition-shadow",
-            stat.highlight ? "bg-white shadow-[0_20px_50px_rgba(234,179,8,0.15)]" : "bg-white shadow-[0_15px_35px_rgba(0,0,0,0.05)]"
+            "relative border-none overflow-hidden transition-all duration-300 hover:shadow-xl",
+            stat.highlight ? "bg-white shadow-[0_10px_40px_rgba(234,179,8,0.12)] border-earth-accent/20 border" : "bg-white shadow-sm border border-earth-dark/5"
           )}>
             {/* Top Accent Bar */}
-            <div className={cn("absolute top-0 left-0 w-full h-1.5", 
+            <div className={cn("absolute top-0 left-0 w-full h-1 md:h-1.5", 
               i === 0 ? "bg-blue-500" : i === 1 ? "bg-earth-accent" : i === 2 ? "bg-earth-green" : "bg-earth-green-dark"
             )}></div>
             
-            <CardContent className="p-6 relative z-10 flex flex-col h-full">
-              <div className="flex justify-between items-start mb-6">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-earth-mut">{stat.title}</p>
-                  <h3 className="text-3xl font-black tracking-tighter text-earth-brown tabular-nums leading-none">{stat.value}</h3>
+            <CardContent className="p-4 md:p-6 relative z-10 flex flex-col h-full">
+              <div className="flex justify-between items-start mb-4 md:mb-6">
+                <div className="space-y-0.5 md:space-y-1">
+                  <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-earth-mut">{stat.title}</p>
+                  <h3 className="text-xl md:text-3xl font-black tracking-tighter text-earth-brown tabular-nums leading-none">{stat.value}</h3>
                 </div>
                 <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner shrink-0 group-hover:rotate-6 transition-transform duration-500",
-                  stat.highlight ? "bg-earth-accent/10 text-earth-accent border border-earth-accent/20" : "bg-earth-card border border-earth-dark/10 text-earth-primary"
+                  "w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shadow-inner shrink-0",
+                  stat.highlight ? "bg-earth-accent/10 text-earth-accent" : "bg-earth-card border border-earth-dark/5 text-earth-primary"
                 )}>
-                  <stat.icon size={26} className={stat.highlight ? 'animate-pulse' : ''} />
+                  <stat.icon size={20} className={cn("md:w-[26px] md:h-[26px]", stat.highlight && 'animate-pulse')} />
                 </div>
               </div>
               
-              <div className="mt-auto flex items-center justify-between pt-4 border-t border-earth-dark/[0.05]">
-                <div className="flex items-center gap-1.5">
+              <div className="mt-auto flex items-center justify-between pt-3 md:pt-4 border-t border-earth-dark/[0.05]">
+                <div className="flex items-center gap-1 md:gap-1.5">
                   <span className={cn(
-                    "flex items-center text-[10px] font-black px-2 py-0.5 rounded-full",
+                    "flex items-center text-[8px] md:text-[10px] font-black px-1.5 md:px-2 py-0.5 rounded-full",
                     stat.up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
                   )}>
-                    {stat.up && stat.trend.includes('%') ? <ArrowUpRight size={12} className="mr-1" /> : null}
+                    {stat.up && stat.trend.includes('%') ? <ArrowUpRight size={10} className="mr-0.5 md:mr-1" /> : null}
                     {stat.trend}
                   </span>
-                  <span className="text-[9px] uppercase tracking-widest font-black text-earth-mut/70">Vs Last Phase</span>
                 </div>
-                <Activity size={12} className="text-earth-mut/30" />
+                <Activity size={10} className="text-earth-mut/30" />
               </div>
             </CardContent>
           </Card>
@@ -278,15 +277,16 @@ export default function Dashboard() {
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+               {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-earth-dark text-white rounded-t-xl overflow-hidden">
+                  <thead className="bg-earth-dark text-white">
                     <tr>
-                      <th className="px-3 md:px-6 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em]">Deployment Identity</th>
-                      <th className="px-3 md:px-6 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em]">Classification</th>
-                      <th className="px-3 md:px-6 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em]">Operational Zone</th>
-                      <th className="px-3 md:px-6 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em]">Valuation</th>
-                      <th className="px-3 md:px-6 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-right">Commander Action</th>
+                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em]">Deployment Identity</th>
+                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em]">Classification</th>
+                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em]">Operational Zone</th>
+                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em]">Valuation</th>
+                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-right">Commander Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-earth-dark/5">
@@ -297,68 +297,99 @@ export default function Dashboard() {
                           <p className="text-[10px] font-black uppercase text-earth-mut">Syncing Assignment Queue...</p>
                         </td>
                       </tr>
-                    ) : assignmentQueue.length > 0 ? assignmentQueue.map((booking) => {
-                      return (
-                        <tr key={booking.id} className="group hover:bg-earth-card transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="px-2 py-1 rounded-md bg-earth-card border border-earth-dark/10 flex items-center justify-center text-[9px] uppercase tracking-widest font-black text-earth-mut">
-                                {booking.id}
-                              </div>
-                              <span className="font-bold text-earth-brown text-sm">{booking.farmer_name}</span>
+                    ) : assignmentQueue.length > 0 ? assignmentQueue.map((booking) => (
+                      <tr key={booking.id} className="group hover:bg-earth-card transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="px-2 py-1 rounded-md bg-earth-card border border-earth-dark/10 flex items-center justify-center text-[9px] uppercase tracking-widest font-black text-earth-mut">
+                              {booking.id}
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-earth-dark/15 bg-earth-card/50 text-earth-brown">
-                              {booking.service_type}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-bold text-earth-sub">
-                            <div>{booking.land_size} Hectares</div>
-                            <div className="text-[10px] opacity-60 flex items-center gap-1"><MapPin size={10} /> {booking.location || 'Standard Zone'}</div>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-black text-primary">
-                            {formatCurrency(booking.total_price)}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                onClick={() => handleAssign(booking.id)}
-                                disabled={assignmentStatus === booking.id}
-                                className="bg-earth-accent hover:bg-earth-accent/90 text-white h-9 px-6 text-[10px] font-black uppercase tracking-widest rounded-xl shadow-[0_4px_15px_rgba(255,152,0,0.3)] hover:scale-105 active:scale-95 transition-all border-none"
-                              >
-                                {assignmentStatus === booking.id ? "SYNCING..." : "ASSIGN UNIT"}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr>
-                        <td colSpan={5} className="py-12 text-center text-earth-mut font-bold uppercase text-[10px] tracking-widest">
-                           All jobs assigned
+                            <span className="font-bold text-earth-brown text-sm">{booking.farmer_name}</span>
+                          </div>
                         </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-earth-dark/15 bg-earth-card/50 text-earth-brown">
+                            {booking.service_type}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-earth-sub">
+                          <div>{booking.land_size} Hectares</div>
+                          <div className="text-[10px] opacity-60 flex items-center gap-1"><MapPin size={10} /> {booking.location || 'Standard Zone'}</div>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-black text-primary">
+                          {formatCurrency(booking.total_price)}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button 
+                            onClick={() => handleAssign(booking.id)}
+                            disabled={assignmentStatus === booking.id}
+                            className="bg-earth-accent hover:bg-earth-accent/90 text-white h-9 px-6 text-[10px] font-black uppercase tracking-widest rounded-xl shadow-[0_4px_15px_rgba(255,152,0,0.3)] hover:scale-105 active:scale-95 transition-all border-none"
+                          >
+                            {assignmentStatus === booking.id ? "SYNCING..." : "ASSIGN UNIT"}
+                          </Button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-earth-mut font-bold uppercase text-[10px] tracking-widest">All jobs assigned</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden p-4 space-y-4">
+                {isLoading ? (
+                  <div className="py-10 text-center">
+                    <Clock className="animate-spin mx-auto text-earth-primary mb-2" size={20} />
+                    <p className="text-[10px] font-black uppercase text-earth-mut">Syncing...</p>
+                  </div>
+                ) : assignmentQueue.length > 0 ? assignmentQueue.map((booking) => (
+                  <div key={booking.id} className="p-4 rounded-2xl bg-earth-card/30 border border-earth-dark/5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <div className="px-1.5 py-0.5 rounded-md bg-white border border-earth-dark/10 text-[8px] font-black text-earth-mut">{booking.id}</div>
+                        <span className="font-bold text-earth-brown text-sm">{booking.farmer_name}</span>
+                      </div>
+                      <Badge className="text-[8px] font-black uppercase tracking-widest bg-earth-primary/20 text-earth-brown border-none">{booking.service_type}</Badge>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div className="text-[10px] font-bold text-earth-sub space-y-1">
+                        <p>{booking.land_size} Hectares</p>
+                        <p className="opacity-60 flex items-center gap-1"><MapPin size={10} /> {booking.location}</p>
+                        <p className="text-earth-primary font-black">{formatCurrency(booking.total_price)}</p>
+                      </div>
+                      <Button 
+                        onClick={() => handleAssign(booking.id)}
+                        disabled={assignmentStatus === booking.id}
+                        size="sm"
+                        className="bg-earth-accent text-white font-black uppercase tracking-widest text-[9px] rounded-lg px-4"
+                      >
+                        Assign
+                      </Button>
+                    </div>
+                  </div>
+                )) : (
+                  <p className="p-8 text-center text-earth-mut font-black uppercase text-[10px] tracking-widest opacity-50">Queue Empty</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* Revenue Chart Refinement */}
-          <Card className="bg-earth-card-alt border border-earth-dark/10 rounded-[1.5rem] overflow-hidden">
-             <div className="p-6 border-b border-earth-dark/10 flex justify-between items-center">
+          <Card className="bg-earth-card-alt shadow-lg rounded-[1.5rem] overflow-hidden">
+             <div className="p-6 flex justify-between items-center bg-earth-card/30">
                 <h3 className="text-sm font-black text-earth-brown uppercase tracking-widest">Revenue Analytics</h3>
                 <div className="flex gap-2">
-                   {['Hourly', 'Daily', 'Weekly'].map(t => {
+                   {['Daily', 'Weekly', 'Monthly'].map(t => {
                      const isActive = t.toLowerCase() === timeframe;
                      return (
-                       <button 
-                         key={t} 
-                         onClick={() => setTimeframe(t.toLowerCase())}
-                         className={cn("text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-md border transition-all", isActive ? "bg-earth-primary text-earth-brown border-earth-primary shadow-[0_0_10px_rgba(234,179,8,0.3)]" : "bg-earth-card text-earth-mut border-earth-dark/10 hover:text-earth-brown")}
-                       >
+                        <button 
+                          key={t} 
+                          onClick={() => setTimeframe(t.toLowerCase())}
+                          className={cn("text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-md transition-all shadow-sm", isActive ? "bg-earth-primary text-earth-brown shadow-[0_0_15px_rgba(234,179,8,0.2)] scale-105" : "bg-earth-card text-earth-mut hover:text-earth-brown hover:shadow-md")}
+                        >
                          {t}
                        </button>
                      );
@@ -409,8 +440,8 @@ export default function Dashboard() {
 
         {/* FLEET MONITORING */}
         <div className="lg:col-span-4 space-y-5">
-           <Card className="bg-white border-none shadow-[0_20px_50px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden flex flex-col h-full">
-            <CardHeader className="border-b border-earth-dark/5 pb-5 pt-7 px-8 shrink-0 bg-white">
+           <Card className="bg-white shadow-[0_30px_60px_rgba(0,0,0,0.06)] rounded-[2rem] overflow-hidden flex flex-col h-full">
+            <CardHeader className="pb-5 pt-7 px-8 shrink-0 bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-earth-primary shadow-[0_0_8px_rgba(234,179,8,0.5)] animate-pulse"></div>
@@ -422,8 +453,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
-              {/* Real GPS Map */}
-              <div className="h-[300px] bg-earth-main relative border-b border-earth-dark/10 shrink-0 group overflow-hidden">
+              <div className="relative z-0 h-[300px] bg-earth-main relative border-b border-earth-dark/10 shrink-0 group overflow-hidden">
                  <MapContainer 
                   center={DEFAULT_CENTER} 
                   zoom={10} 
@@ -546,27 +576,27 @@ export default function Dashboard() {
                           t.status?.toLowerCase() === 'available' ? 'bg-earth-green' : 'bg-earth-accent'
                         )}></div>
                         
-                        <div className="flex justify-between items-start mb-5 relative z-10">
-                          <div className="flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-5 relative z-10">
+                          <div className="flex items-center gap-4 min-w-0">
                             <div className={cn(
-                              "w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-all transform group-hover:rotate-6 duration-500",
+                              "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shadow-inner transition-all transform group-hover:rotate-6 duration-500 shrink-0",
                               t.status?.toLowerCase() === 'available' ? 'bg-emerald-50 text-earth-green border border-emerald-100' : 
                               t.status?.toLowerCase() === 'in_use' ? 'bg-amber-50 text-earth-accent border border-amber-100' : 
                               'bg-red-50 text-red-500 border border-red-100'
                             )}>
-                               <Tractor size={24} />
+                               <Tractor size={22} className="md:w-6 md:h-6" />
                             </div>
-                            <div className="space-y-0.5" style={{ minWidth: 0 }}>
+                            <div className="space-y-0.5 min-w-0">
                               <p className="font-black text-earth-brown text-base tracking-tight truncate">{t.operator_name}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 overflow-hidden">
                                 <span className="text-[10px] text-earth-mut font-black uppercase tracking-widest truncate">{t.tractor_model}</span>
                                 <div className="w-1 h-1 bg-earth-dark/10 rounded-full shrink-0"></div>
-                                <span className="text-[9px] text-earth-mut font-black uppercase tracking-[0.2em] shrink-0">UNIT #T-{t.id}</span>
+                                <span className="text-[9px] text-earth-mut font-black uppercase tracking-[0.2em] shrink-0">#T-{t.id}</span>
                               </div>
                             </div>
                           </div>
                           <div className={cn(
-                            "text-[8px] px-3 py-1 font-black uppercase tracking-[0.2em] rounded-full shadow-sm text-white shrink-0",
+                            "text-[8px] px-3 py-1 font-black uppercase tracking-[0.2em] rounded-full shadow-sm text-white shrink-0 sm:ml-auto",
                             t.status?.toLowerCase() === 'available' ? 'bg-earth-green shadow-emerald-500/20' : 
                             t.status?.toLowerCase() === 'in_use' ? 'bg-earth-accent shadow-amber-500/20' : 
                             'bg-red-500 shadow-red-500/20'
@@ -575,22 +605,22 @@ export default function Dashboard() {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4 pt-5 border-t border-earth-dark/[0.05] relative z-10">
-                          <div className="space-y-2">
-                             <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-4 md:pt-5 border-t border-earth-dark/[0.05] relative z-10">
+                          <div className="space-y-1.5 md:space-y-2">
+                             <div className="flex justify-between items-center text-[8px] md:text-[9px] font-black uppercase tracking-widest text-earth-mut">
                                 <span>Engine Hours</span>
                                 <span className="text-earth-brown text-right">{t.engine_hours || 0} HRS</span>
                              </div>
-                             <div className="h-1.5 bg-earth-dark/[0.03] rounded-full overflow-hidden">
+                             <div className="h-1 md:h-1.5 bg-earth-dark/[0.03] rounded-full overflow-hidden">
                                 <div className="h-full bg-earth-accent rounded-full shadow-[0_0_8px_rgba(255,152,0,0.4)]" style={{ width: `${Math.min(((t.engine_hours || 0) / 250) * 100, 100)}%` }}></div>
                              </div>
                           </div>
-                          <div className="space-y-2">
-                             <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
+                          <div className="space-y-1.5 md:space-y-2">
+                             <div className="flex justify-between items-center text-[8px] md:text-[9px] font-black uppercase tracking-widest text-earth-mut">
                                 <span>Shift Status</span>
                                 <span className={cn("text-right font-bold uppercase", t.operator_availability === 'available' ? "text-earth-green" : "text-earth-accent")}>{t.operator_availability}</span>
                              </div>
-                             <div className="h-1.5 bg-earth-dark/[0.03] rounded-full overflow-hidden">
+                             <div className="h-1 md:h-1.5 bg-earth-dark/[0.03] rounded-full overflow-hidden">
                                 <div className={cn("h-full rounded-full transition-all duration-1000", t.operator_availability === 'available' ? "bg-earth-green w-full shadow-[0_0_8px_rgba(46,125,50,0.4)]" : "bg-earth-accent w-1/2 shadow-[0_0_8px_rgba(255,152,0,0.4)]")}></div>
                              </div>
                           </div>

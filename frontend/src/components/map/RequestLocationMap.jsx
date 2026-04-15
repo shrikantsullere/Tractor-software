@@ -76,7 +76,7 @@ export default function RequestLocationMap({ selectedLocation, onPick, autoUseCu
   }, [autoUseCurrentLocation, onPick, selectedLocation]);
 
   return (
-    <div className="w-full h-[420px] rounded-2xl overflow-hidden border border-earth-dark/10">
+    <div className="relative z-0 w-full h-[420px] rounded-2xl overflow-hidden border border-earth-dark/10">
       <MapContainer center={center} zoom={13} className="w-full h-full" scrollWheelZoom>
         <TileLayer
           attribution="&copy; OpenFreeMap contributors"

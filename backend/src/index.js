@@ -9,6 +9,7 @@ import adminRoutes from './routes/admin.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import requestRoutes from './routes/request.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import { sendError } from './utils/response.js';
 
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/operator', operatorRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/request', requestRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
@@ -83,15 +85,27 @@ io.on('connection', (socket) => {
    * - Admin joins:   'admin-tracking' (sees all)
    * - Legacy:        'default-room'
    */
-  socket.on('tracking:join', ({ roomId = 'default-room', role, bookingId, operatorId } = {}) => {
+  socket.on('tracking:join', (data = {}) => {
+    const { roomId = 'default-room', role, bookingId, operatorId, userId, farmerId } = data;
+    
     // Build the actual room name
     let actualRoom = roomId;
     if (bookingId) {
       actualRoom = `track-booking-${bookingId}`;
     }
+    
     if (role === 'admin') {
       // Admin always joins the admin-tracking room
       socket.join('admin-tracking');
+    }
+
+    // Join personal user room for targeted notifications
+    // We prioritize operatorId, then userId, then farmerId
+    const personalId = operatorId || userId || farmerId;
+    
+    if (personalId) {
+      socket.join(`user-${personalId}`);
+      console.log(`[Socket] User ${personalId} joined personal room: user-${personalId}`);
     }
 
     socket.join(actualRoom);

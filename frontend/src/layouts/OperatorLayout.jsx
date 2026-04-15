@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Briefcase, Navigation2, CheckCircle, Fuel, User, LogOut, Tractor, Bell, ChevronRight, Menu, ListCollapse, CheckCircle2, AlertCircle, MessageSquare, X } from 'lucide-react';
+import { LayoutDashboard, Compass, Radio, Calendar, Users, Briefcase, ListCollapse, TrendingUp, SettingsIcon, LogOut, ChevronRight, Bell, Tractor, CheckCircle2, AlertCircle, MessageSquare, Truck, Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import NotificationDropdown from '../components/NotificationDropdown';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OperatorLayout() {
@@ -13,12 +14,6 @@ export default function OperatorLayout() {
   const sidebarRef = useRef(null);
   const notificationRef = useRef(null);
   const operatorName = user?.name || "Raju";
-
-  const notifications = [
-    { id: 1, title: 'New Job Assigned', message: 'Tractor #T24 assigned for Plot 88', time: '5m ago', icon: Briefcase, color: 'text-earth-primary', unread: true },
-    { id: 2, title: 'Fuel Alert', message: 'Fuel level dropped below 15%', time: '1h ago', icon: AlertCircle, color: 'text-red-400', unread: true },
-    { id: 3, title: 'System Check', message: 'Diagnostic check passed for all units', time: '4h ago', icon: CheckCircle2, color: 'text-earth-green', unread: false },
-  ];
 
   // Only close sidebar when route changes on mobile
   useEffect(() => {
@@ -52,23 +47,12 @@ export default function OperatorLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSidebarOpen]);
 
-  // Click outside to close notifications
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const navItems = [
     { icon: Briefcase, label: 'Jobs', path: '/operator' },
-    { icon: Navigation2, label: 'Nav', path: '/operator/navigation' },
-    { icon: CheckCircle, label: 'Status', path: '/operator/status' },
-    { icon: Fuel, label: 'Fuel', path: '/operator/fuel' },
-    { icon: User, label: 'Profile', path: '/operator/profile' },
+    { icon: Compass, label: 'Nav', path: '/operator/navigation' },
+    { icon: CheckCircle2, label: 'Status', path: '/operator/status' },
+    { icon: Truck, label: 'Fuel', path: '/operator/fuel' },
+    { icon: Users, label: 'Profile', path: '/operator/profile' },
   ];
 
   return (
@@ -78,7 +62,7 @@ export default function OperatorLayout() {
       <aside 
         ref={sidebarRef}
         className={cn(
-          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-50 shadow-2xl overflow-hidden",
+          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-[1001] shadow-2xl overflow-hidden",
           isSidebarOpen ? "w-[240px] translate-x-0" : "w-[240px] -translate-x-[240px]"
         )}
       >
@@ -131,7 +115,7 @@ export default function OperatorLayout() {
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
         
         {/* --- TOP NAVBAR (Mirrors FarmerLayout) --- */}
-        <header className="hidden md:flex h-16 bg-earth-card/80 backdrop-blur-md border-b border-earth-dark/10 items-center justify-between px-6 z-20 shrink-0 shadow-sm">
+        <header className="hidden md:flex h-16 bg-earth-card/80 backdrop-blur-md border-b border-earth-dark/10 items-center justify-between px-6 z-[1002] shrink-0 shadow-sm">
           <div className="flex items-center gap-4">
             <button 
               onClick={(e) => {
@@ -146,61 +130,7 @@ export default function OperatorLayout() {
           </div>
           
           <div className="flex items-center gap-5 text-sm">
-            <div ref={notificationRef} className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={cn(
-                  "relative p-2 transition-colors rounded-full",
-                  showNotifications ? "bg-earth-card-alt text-earth-primary" : "text-earth-sub hover:text-earth-primary hover:bg-earth-card-alt"
-                )}
-              >
-                <Bell size={20} strokeWidth={2.5} />
-                {notifications.some(n => n.unread) && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-neutral-900 shadow-sm"></span>
-                )}
-              </button>
-
-              {/* Notification Dropdown */}
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-3 w-[320px] bg-earth-card border border-earth-dark/10 rounded-2xl shadow-2xl z-50 overflow-hidden origin-top-right"
-                  >
-                    <div className="p-4 border-b border-earth-dark/10 flex items-center justify-between bg-earth-card-alt/50">
-                      <h3 className="font-black text-[10px] uppercase tracking-widest text-earth-brown">System Logs</h3>
-                      <button onClick={() => setShowNotifications(false)} className="text-earth-mut hover:text-earth-brown"><X size={14} /></button>
-                    </div>
-                    <div className="max-h-[350px] overflow-y-auto scrollbar-hide">
-                      {notifications.map((n) => (
-                        <div key={n.id} className={cn(
-                          "p-4 border-b border-earth-dark/10/50 hover:bg-earth-card-alt/50 transition-colors cursor-pointer group",
-                          n.unread && "bg-earth-primary/[0.02]"
-                        )}>
-                          <div className="flex gap-4">
-                            <div className={cn("w-9 h-9 rounded-xl bg-earth-card border border-earth-dark/10 flex items-center justify-center shrink-0 group-hover:border-earth-dark/15 transition-colors", n.color)}>
-                              <n.icon size={16} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start mb-0.5">
-                                <p className="text-xs font-black text-earth-brown group-hover:text-earth-primary transition-colors italic">{n.title}</p>
-                                <span className="text-[9px] font-bold text-earth-mut whitespace-nowrap">{n.time}</span>
-                              </div>
-                              <p className="text-[11px] text-earth-sub leading-tight line-clamp-2 font-medium">{n.message}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-3 bg-earth-card-alt/30 text-center">
-                      <button className="text-[9px] uppercase font-black text-earth-mut hover:text-earth-brown transition-colors">Clear All Logouts</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <NotificationDropdown />
 
             <div className="h-6 w-px bg-earth-card-alt"></div>
             <div className="flex items-center gap-3 cursor-pointer group">
@@ -225,7 +155,7 @@ export default function OperatorLayout() {
 
         {/* --- MOBILE BOTTOM NAVIGATION --- */}
         <nav 
-          className="md:hidden fixed bottom-0 w-full bg-earth-card border-t border-earth-dark/10 flex justify-around pt-3 pb-2 px-1 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+          className="md:hidden fixed bottom-0 w-full bg-earth-card border-t border-earth-dark/10 flex justify-around pt-3 pb-2 px-1 z-[1001] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
         >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;

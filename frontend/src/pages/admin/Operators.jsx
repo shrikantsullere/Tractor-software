@@ -100,7 +100,7 @@ export default function Operators() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search Operators..." 
-              className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary shadow-inner"
+              className="pl-12 bg-earth-card border-none rounded-2xl h-12 focus:ring-0 focus:border-none shadow-sm font-bold"
             />
           </div>
           <Button 
@@ -119,7 +119,7 @@ export default function Operators() {
             <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic">Certified Operators Registry</CardTitle>
             <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1 tracking-[0.1em]">Authorized personnel managing agency equipment</CardDescription>
           </div>
-          <button onClick={fetchOperators} className="p-3 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border border-earth-dark/5 shadow-sm">
+          <button onClick={fetchOperators} className="p-3 bg-white hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown border-none shadow-sm">
             <RefreshCw size={18} className={isLoading ? "animate-spin text-earth-primary" : ""} />
           </button>
         </CardHeader>
@@ -155,8 +155,8 @@ export default function Operators() {
                   <tr key={op.id} className="group hover:bg-earth-primary/5 transition-all duration-300">
                     <td className="px-8 py-5">
                        <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/15 shadow-inner group-hover:border-earth-primary/30 transition-all">
-                            <Briefcase size={18} />
+                         <div className="w-10 h-10 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown shadow-sm border-none transition-all group-hover:scale-110">
+                            <Briefcase size={18} className="group-hover:text-earth-primary" />
                          </div>
                          <div>
                             <p className="text-sm font-black text-earth-brown">{op.name}</p>
@@ -251,7 +251,7 @@ export default function Operators() {
                          required
                          value={formData.name}
                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                         className="pl-12 bg-earth-card rounded-2xl h-12 shadow-sm border-none font-bold outline-none ring-0 placeholder:text-earth-mut/60"
                          placeholder="e.g. Samuel Adebayo"
                        />
                      </div>
@@ -265,7 +265,7 @@ export default function Operators() {
                           required
                           value={formData.phone}
                           onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                          className="pl-12 bg-earth-card rounded-2xl h-12 shadow-sm border-none font-bold outline-none ring-0 placeholder:text-earth-mut/60"
                           placeholder="08012345678"
                         />
                       </div>
@@ -280,7 +280,7 @@ export default function Operators() {
                          type="password"
                          value={formData.password}
                          onChange={(e) => setFormData({...formData, password: e.target.value})}
-                         className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-0 focus:border-earth-primary font-bold shadow-inner"
+                         className="pl-12 bg-earth-card rounded-2xl h-12 shadow-sm border-none font-bold outline-none ring-0 placeholder:text-earth-mut/60"
                          placeholder="••••••••"
                        />
                      </div>

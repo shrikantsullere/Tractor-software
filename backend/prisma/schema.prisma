@@ -23,7 +23,8 @@ model User {
   bookings         Booking[] @relation("FarmerBookings")
   operatorBookings Booking[] @relation("OperatorBookings")
   fuelLogs         FuelLog[] @relation("OperatorFuelLogs")
-  tractor          Tractor?  @relation("OperatorTractor")
+  tractor          Tractor?       @relation("OperatorTractor")
+  notifications    Notification[] @relation("UserNotifications")
 
   @@map("users")
 }
@@ -172,4 +173,17 @@ model FuelPriceLog {
   timestamp DateTime @default(now()) @map("timestamp")
 
   @@map("fuel_price_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  role      String   // admin / farmer / operator
+  message   String   @db.Text
+  type      String   // booking / assignment / tracking / payment
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation("UserNotifications", fields: [userId], references: [id])
+
+  @@map("notifications")
 }

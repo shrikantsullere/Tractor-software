@@ -74,7 +74,7 @@ export default function Farmers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search Farmers/Locations..." 
-              className="pl-12 bg-earth-card border-earth-dark/10 rounded-2xl h-12 focus:ring-1 focus:ring-earth-primary/30 font-bold shadow-inner"
+              className="pl-12 bg-earth-card rounded-2xl h-12 focus:ring-1 focus:ring-earth-primary/30 font-bold shadow-sm border-none"
             />
           </div>
           <Button 
@@ -113,7 +113,7 @@ export default function Farmers() {
             <CardTitle className="text-base font-black text-earth-brown uppercase tracking-wider italic font-outfit">Platform Users Registry</CardTitle>
             <CardDescription className="text-[10px] font-bold text-earth-mut uppercase mt-1 tracking-[0.1em]">Verified agricultural service consumers</CardDescription>
           </div>
-          <button onClick={fetchFarmers} className="p-3 hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown shadow-sm border border-earth-dark/5">
+          <button onClick={fetchFarmers} className="p-3 bg-white hover:bg-earth-card-alt rounded-2xl transition-all text-earth-mut hover:text-earth-brown shadow-sm border-none">
             <RefreshCw size={18} className={isLoading ? "animate-spin text-earth-primary" : ""} />
           </button>
         </CardHeader>
@@ -154,7 +154,7 @@ export default function Farmers() {
                       <tr key={farmer.id} className="group hover:bg-earth-primary/5 transition-all duration-300">
                         <td className="px-8 py-5">
                            <div className="flex items-center gap-4">
-                             <div className="w-12 h-12 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown border border-earth-dark/10 shadow-inner group-hover:border-earth-primary/30 group-hover:scale-110 transition-all duration-300">
+                             <div className="w-12 h-12 rounded-2xl bg-earth-card-alt flex items-center justify-center text-earth-brown shadow-sm border-none group-hover:scale-110 transition-all duration-300">
                                 <Users size={20} className="group-hover:text-earth-primary transition-colors" />
                              </div>
                              <div>
@@ -177,7 +177,7 @@ export default function Farmers() {
                         </td>
                         <td className="px-8 py-5">
                            <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 bg-earth-primary/10 rounded-xl flex items-center justify-center text-earth-primary border border-earth-primary/20 shadow-inner">
+                              <div className="h-9 w-9 bg-earth-primary/10 rounded-xl flex items-center justify-center text-earth-primary shadow-sm border-none">
                                  <span className="text-xs font-black">{farmer.totalBookings}</span>
                               </div>
                               <div className="flex flex-col">
@@ -212,10 +212,10 @@ export default function Farmers() {
                               disabled={updatingId === farmer.id}
                               onClick={() => handleToggleStatus(farmer.id, farmer.status)}
                               className={cn(
-                                "text-[9px] px-4 font-black uppercase tracking-widest h-10 rounded-xl transition-all border-b-2 active:translate-y-0.5",
+                                "text-[9px] px-4 font-black uppercase tracking-widest h-10 rounded-xl transition-all border-none active:translate-y-0.5",
                                 farmer.status === 'active' 
-                                  ? 'bg-earth-card-alt border-earth-dark/15 text-earth-sub hover:text-red-500 hover:border-red-500/30' 
-                                  : 'bg-earth-primary text-earth-brown border-earth-primary/30'
+                                  ? 'bg-earth-card-alt text-earth-sub shadow-sm hover:text-red-500' 
+                                  : 'bg-earth-primary text-earth-brown shadow-[0_0_15px_rgba(234,179,8,0.2)]'
                               )}
                             >
                               {updatingId === farmer.id ? (
@@ -239,10 +239,10 @@ export default function Farmers() {
               {/* Mobile Card View */}
               <div className="md:hidden p-4 space-y-4">
                 {filteredFarmers.map((farmer) => (
-                  <div key={farmer.id} className="bg-earth-card-alt border border-earth-dark/10 rounded-3xl p-5 space-y-5 shadow-sm">
+                  <div key={farmer.id} className="bg-earth-card-alt border-none rounded-[2rem] p-5 space-y-5 shadow-lg relative overflow-hidden">
                     <div className="flex justify-between items-start">
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-earth-card flex items-center justify-center text-earth-brown border border-earth-dark/10 shadow-inner">
+                      <div className="flex gap-4 z-10 relative">
+                        <div className="w-12 h-12 rounded-2xl bg-earth-card flex items-center justify-center text-earth-brown shadow-sm border-none">
                           <Users size={20} />
                         </div>
                         <div>
@@ -267,9 +267,9 @@ export default function Farmers() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center justify-between pt-1 relative z-10">
                       <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 bg-earth-primary/10 rounded-xl flex items-center justify-center text-earth-primary border border-earth-primary/20 shadow-inner">
+                        <div className="h-8 w-8 bg-earth-primary/10 rounded-xl flex items-center justify-center text-earth-primary shadow-sm border-none">
                           <span className="text-xs font-black">{farmer.totalBookings}</span>
                         </div>
                         <span className="text-[10px] font-black text-earth-mut uppercase tracking-widest">Lifetime Bookings</span>

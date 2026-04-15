@@ -1,4 +1,5 @@
 import * as BookingService from '../../services/booking.service.js';
+import NotificationService from '../../services/notification.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 import { bookingCreateSchema, pricePreviewSchema } from '../../schema/booking.schema.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -50,6 +51,14 @@ export const createBooking = async (req, res) => {
       ...booking,
       formattedTotalPrice: formatCurrency(booking.totalPrice)
     };
+    
+    // Trigger Admin Notification (Async - non-blocking)
+    const io = req.app.get('io');
+    NotificationService.notifyAdmins(io, {
+      message: "New booking request received",
+      type: "booking",
+      metadata: { bookingId: booking.id, farmerId }
+    });
     
     return sendSuccess(res, formattedBooking, "Booking scheduled successfully", 201);
   } catch (error) {

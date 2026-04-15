@@ -15,7 +15,6 @@ export default function History() {
   const { bookings, loading, pagination, fetchBookings } = useBookings();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -30,18 +29,18 @@ export default function History() {
       fetchBookings({
         page: 1, 
         search: searchTerm, 
-        status: statusFilter === 'All' ? 'all' : statusFilter.toLowerCase().replace(/\s+/g, '_')
+        status: 'completed'
       });
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm]);
 
   const handlePageChange = (newPage) => {
     fetchBookings({
       page: newPage,
       search: searchTerm,
-      status: statusFilter === 'All' ? 'all' : statusFilter.toLowerCase().replace(/\s+/g, '_')
+      status: 'completed'
     });
   };
 
@@ -55,7 +54,7 @@ export default function History() {
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text("FARMER SERVICE HISTORY REPORT", 14, 28);
-      doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${statusFilter.toUpperCase()}`, 14, 34);
+      doc.text(`Generated: ${new Date().toLocaleString()} | Filter: COMPLETED`, 14, 34);
 
       const tableRows = bookings.map(b => [
         String(b.id).toUpperCase(),
@@ -159,19 +158,6 @@ export default function History() {
           </div>
           
           <div className="flex gap-2 flex-1 sm:flex-none">
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-[10px] uppercase tracking-widest px-4 focus:ring-2 focus:ring-earth-primary/50 outline-none cursor-pointer flex-1 sm:w-36"
-            >
-              <option value="All">All Status</option>
-              <option value="Completed">Completed</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Assigned">Assigned</option>
-              <option value="Scheduled">Scheduled</option>
-              <option value="Pending">Pending</option>
-            </select>
-
             <Button 
               onClick={handleExport}
               disabled={isExporting}
@@ -446,9 +432,27 @@ export default function History() {
                   </div>
                 </div>
 
-                {/* 3. Financial Ledger - Tightened */}
+                {/* 3. Financial Ledger - Tightened with Payment Status */}
                 <div className="space-y-3">
-                  <h4 className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em] px-1">Financial Settlement</h4>
+                  <div className="flex justify-between items-center px-1">
+                    <h4 className="text-[9px] font-black text-earth-mut uppercase tracking-[0.2em]">Financial Settlement</h4>
+                    {(() => {
+                        const paidAmount = selectedBooking.payments?.reduce((s, p) => s + p.amount, 0) || 0;
+                        const pStatus = selectedBooking.paymentStatus || 'PENDING';
+                        return (
+                          <Badge 
+                            className={cn(
+                              "text-[8px] px-2 py-0 border font-black uppercase tracking-widest",
+                              pStatus === 'PAID' ? 'bg-earth-primary/20 text-earth-green border-earth-green/20' :
+                              pStatus === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+                              'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                            )}
+                          >
+                            {pStatus}
+                          </Badge>
+                        );
+                    })()}
+                  </div>
                   <div className="bg-white border border-earth-dark/10 rounded-[1.5rem] p-4 space-y-2 shadow-inner">
                     <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-mut">
                       <span>Base Service Fee</span>
@@ -458,11 +462,34 @@ export default function History() {
                       <span>Logistics Surcharge</span>
                       <span className="text-earth-brown">{formatCurrency(selectedBooking.distanceCharge)}</span>
                     </div>
+                    
                     <div className="h-px bg-earth-dark/5 my-1" />
+                    
                     <div className="flex justify-between items-center pt-1">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-earth-primary italic">Total Valuation</span>
                       <span className="text-xl font-black text-earth-brown tracking-tighter italic">{formatCurrency(selectedBooking.totalPrice)}</span>
                     </div>
+
+                    {(() => {
+                        const paidAmount = selectedBooking.payments?.reduce((s, p) => s + p.amount, 0) || 0;
+                        const balance = selectedBooking.totalPrice - paidAmount;
+                        if (paidAmount <= 0) return null;
+                        
+                        return (
+                          <div className="pt-2 mt-2 border-t border-earth-dark/5 space-y-1">
+                            <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-earth-green">
+                               <span>Amount Cleared</span>
+                               <span>{formatCurrency(paidAmount)}</span>
+                            </div>
+                            {balance > 0 && (
+                              <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-red-500">
+                                 <span>Outstanding Balance</span>
+                                 <span>{formatCurrency(balance)}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                    })()}
                   </div>
                 </div>
 

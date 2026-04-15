@@ -11,9 +11,7 @@ import useScrollLock from '../../hooks/useScrollLock';
 export default function Status() {
   const [activeJob, setActiveJob] = useState(null);
   const [currentStatusId, setCurrentStatusId] = useState('idle');
-  const [timer, setTimer] = useState(0);
-  const [isTimerActive, setIsTimerActive] = useState(false);
-  const [activeDialog, setActiveDialog] = useState(null); // 'comm' | 'sos' | 'summary'
+  const [activeDialog, setActiveDialog] = useState(null); // 'summary'
   const [loading, setLoading] = useState(true);
 
   // Lock background scroll when mission dialog is active
@@ -48,23 +46,7 @@ export default function Status() {
     fetchJobForStatus();
   }, []);
 
-  useEffect(() => {
-    let interval = null;
-    if (isTimerActive) {
-      interval = setInterval(() => {
-        setTimer(prev => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerActive]);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const currentIdx = statuses.findIndex(s => s.id === currentStatusId);
 
@@ -75,9 +57,7 @@ export default function Status() {
       const res = await api.operator.updateStatus(activeJob.id, statusId);
       if (res.success) {
         setCurrentStatusId(statusId);
-        if (statusId === 'in_progress') setIsTimerActive(true);
         if (statusId === 'completed') {
-          setIsTimerActive(false);
           setTimeout(() => setActiveDialog('summary'), 1000);
         }
       }
@@ -100,10 +80,6 @@ export default function Status() {
             <ShieldCheck size={12} className="text-earth-primary" /> Secure Satellite Link Active • Unit #T-42
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-earth-card border border-earth-dark/10 px-4 py-2 rounded-xl shadow-inner">
-           <Clock size={16} className={cn("text-earth-mut", isTimerActive && "text-earth-primary animate-pulse")} />
-           <span className="text-sm font-black tabular-nums text-earth-brown uppercase tracking-tighter">Mission Time: {formatTime(timer)}</span>
-        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
@@ -119,7 +95,6 @@ export default function Status() {
                   <User size={14} className="text-earth-primary" />
                   <span className="font-black tracking-widest uppercase text-[8px] text-earth-mut">Client Identification</span>
                </div>
-               <Badge className="bg-earth-card-alt text-earth-mut text-[8px]">En-Route-Link</Badge>
             </div>
 
             <CardContent className="p-6 md:p-7 space-y-6">
@@ -147,38 +122,17 @@ export default function Status() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <Button 
-                   onClick={() => setActiveDialog('comm')}
-                   className="flex-1 bg-earth-card-alt hover:bg-earth-card text-earth-brown border border-earth-dark/15 h-11 rounded-xl shadow-lg flex items-center justify-center gap-2.5 font-black uppercase tracking-widest text-[9px]"
-                >
-                  <Mail size={14} className="text-earth-green" /> Support-Link
-                </Button>
-                <Button 
-                   onClick={() => setActiveDialog('sos')}
-                   variant="outline" 
-                   className="border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-earth-brown transition-all rounded-xl h-11 px-4 shrink-0 flex items-center justify-center gap-2 group/sos"
-                >
-                  <AlertTriangle size={16} className="group-hover/sos:animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">SOS</span>
-                </Button>
-              </div>
+              {/* Support buttons removed as per user request */}
             </CardContent>
           </Card>
 
-          <div className="p-4 bg-earth-primary/5 border border-earth-primary/10 rounded-2xl flex items-start gap-3">
-             <Info size={16} className="text-earth-primary shrink-0 mt-0.5" />
-             <p className="text-[9px] text-earth-sub font-bold leading-relaxed uppercase tracking-wide">
-                Ensure terrain stability before engaging unit. Telemetry updates every 500ms.
-             </p>
-          </div>
+
         </div>
 
         {/* Right Column: Sequence Controls */}
         <div className="lg:col-span-7 space-y-4">
           <div className="px-1 flex justify-between items-center mb-1">
              <h3 className="font-black text-earth-mut uppercase tracking-widest text-[9px]">Operational Sequence</h3>
-             <span className="text-[7px] font-black text-earth-sub uppercase tracking-[0.2em]">Step {currentIdx + 2} of 5</span>
           </div>
           
           <div className="grid grid-cols-1 gap-3 md:gap-3.5">            {statuses.map((status, idx) => {
@@ -283,19 +237,13 @@ export default function Status() {
                         </div>
                         <div className="space-y-2">
                            <p className="text-xs text-earth-sub font-bold uppercase tracking-wide">Mission Summary Report</p>
-                           <h4 className="text-lg font-black text-earth-brown uppercase italic">Task Accomplished</h4>
-                           <div className="bg-earth-card p-3.5 rounded-xl border border-earth-dark/10 mt-4 space-y-2">
-                              <div className="flex justify-between text-[9px] font-black text-earth-mut uppercase tracking-widest">
-                                 <span>Duration</span>
-                                 <span className="text-earth-brown">{formatTime(timer)}</span>
-                              </div>
-                              <div className="flex justify-between text-[9px] font-black text-earth-mut uppercase tracking-widest">
-                                 <span>Unit Health</span>
-                                 <span className="text-earth-green">Optimal</span>
-                              </div>
+                           <h4 className="text-lg font-black text-earth-green uppercase italic">Task Accomplished</h4>
+                           <div className="bg-earth-card p-4 rounded-2xl border border-earth-dark/10 mt-4 flex items-center justify-center gap-3">
+                              <ShieldCheck size={20} className="text-earth-green" />
+                              <span className="text-xs font-black text-earth-brown uppercase tracking-widest">System Record Sync Complete</span>
                            </div>
                         </div>
-                        <Button onClick={() => { setTimer(0); setActiveDialog(null); }} className="w-full h-12 bg-earth-card-alt text-earth-brown font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-earth-card">Archive Report</Button>
+                        <Button onClick={() => setActiveDialog(null)} className="w-full h-12 bg-earth-primary text-earth-brown font-black uppercase tracking-widest text-[9px] rounded-xl hover:opacity-90">Archive & Finish</Button>
                      </div>
                    )}
                 </div>

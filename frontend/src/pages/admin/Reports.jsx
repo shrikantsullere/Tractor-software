@@ -9,7 +9,9 @@ import autoTable from 'jspdf-autotable';
 
 // --- Improved Custom SVG Chart Components ---
 
-const DonutChart = ({ data, colors = [], size = 200, strokeWidth = 20 }) => {
+const CHART_COLORS = ['#eab308', '#10b981', '#3b82f6', '#f97316', '#a855f7', '#ef4444', '#06b6d4', '#f43f5e'];
+
+const DonutChart = ({ data, colors = CHART_COLORS, size = 200, strokeWidth = 20 }) => {
   if (!data || data.length === 0) return <div className="text-earth-mut font-black uppercase tracking-widest text-[10px]">No data available</div>;
   
   const total = data.reduce((sum, item) => sum + item.count, 0);
@@ -44,10 +46,10 @@ const DonutChart = ({ data, colors = [], size = 200, strokeWidth = 20 }) => {
           );
         })}
       </svg>
-      <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-2">
+      <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-2.5">
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }}></div>
+            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: colors[i % colors.length] }}></div>
             <span className="text-[9px] font-black text-earth-mut uppercase tracking-wider">{item.service || item.status}</span>
             <span className="text-[10px] font-black text-earth-brown">{Math.round((item.count / total) * 100)}%</span>
           </div>
@@ -66,10 +68,13 @@ export default function Reports() {
   const [revenueData, setRevenueData] = useState({ labels: [], data: [] });
   const [serviceUsage, setServiceUsage] = useState([]);
   const [fleetStats, setFleetStats] = useState({ total: 0, active: 0, maintenance: 0, efficiency: 0 });
-  const [farmerGrowth, setFarmerGrowth] = useState({ labels: [], data: [] });
   const [bookingsAnalytics, setBookingsAnalytics] = useState({ labels: [], total: [], completed: [] });
   const [operatorPerformance, setOperatorPerformance] = useState([]);
   const [jobStatusDist, setJobStatusDist] = useState([]);
+  const [tractorProfitability, setTractorProfitability] = useState([]);
+  
+  // Tooltip state for revenue chart
+  const [revenueHover, setRevenueHover] = useState(null); // { index, x, y, value, label }
 
   useEffect(() => {
     fetchAllData();
@@ -78,23 +83,23 @@ export default function Reports() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [rev, serv, fleet, growth, bookAn, opPerf, statusDist] = await Promise.all([
+      const [rev, serv, fleet, bookAn, opPerf, statusDist, profit] = await Promise.all([
         api.admin.reports.getRevenue(range),
         api.admin.reports.getServiceUsage(range),
         api.admin.reports.getFleet(),
-        api.admin.reports.getFarmers(range),
         api.admin.reports.getBookingsAnalytics(range),
         api.admin.reports.getOperatorPerformance(range),
-        api.admin.reports.getJobStatusDistribution(range)
+        api.admin.reports.getJobStatusDistribution(range),
+        api.admin.reports.getTractorProfitability(range)
       ]);
 
       if (rev.success) setRevenueData(rev.data);
       if (serv.success) setServiceUsage(serv.data);
       if (fleet.success) setFleetStats(fleet.data);
-      if (growth.success) setFarmerGrowth(growth.data);
       if (bookAn.success) setBookingsAnalytics(bookAn.data);
       if (opPerf.success) setOperatorPerformance(opPerf.data);
       if (statusDist.success) setJobStatusDist(statusDist.data);
+      if (profit.success) setTractorProfitability(profit.data);
     } catch (error) {
       console.error("Failed to fetch report data:", error);
     } finally {
@@ -209,7 +214,7 @@ export default function Reports() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header & Filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-earth-card-alt p-5 md:p-6 rounded-[1.5rem] shadow-sm border border-earth-dark/15/50 relative overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-earth-card-alt p-5 md:p-6 rounded-[1.5rem] shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-earth-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         <div className="relative z-10">
           <h2 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown">Advanced Analytics Suite</h2>
@@ -217,14 +222,14 @@ export default function Reports() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto relative z-10">
-          <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest bg-earth-card border border-earth-dark/10 rounded-xl p-1.5 shadow-inner">
+          <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest bg-earth-card rounded-xl p-1.5 shadow-sm">
             {['7d', '30d', '1y'].map((r) => (
               <button 
                 key={r}
                 onClick={() => setRange(r)}
                 className={cn(
                   "px-4 sm:px-5 py-2 rounded-lg transition-all",
-                  range === r ? "bg-accent text-white shadow-lg" : "text-earth-mut hover:text-earth-brown"
+                  range === r ? "bg-accent text-white shadow-xl scale-105" : "text-earth-mut hover:text-earth-brown"
                 )}
               >
                 {r === '7d' ? '7D' : r === '30d' ? '30D' : '1Y'}
@@ -267,13 +272,57 @@ export default function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* REVENUE TRENDS (Line Chart) */}
-        <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+        <Card className="shadow-lg bg-earth-card-alt rounded-[1.5rem]">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 bg-earth-card/50 pt-6 px-6">
             <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest flex items-center gap-2"><LineChart size={14} className="text-earth-primary" /> Revenue Trends</CardTitle>
             <Button onClick={downloadPDF} size="icon" className="bg-earth-card hover:bg-earth-card-alt border border-earth-dark/10 text-earth-sub hover:text-earth-brown rounded-lg"><Download size={14} /></Button>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="w-full h-[280px] relative bg-earth-card rounded-2xl border border-earth-dark/10 shadow-inner p-6 flex flex-col group overflow-hidden">
+            <div 
+              className="w-full h-[320px] relative bg-earth-card rounded-3xl shadow-lg p-6 flex flex-col group transition-all"
+              onMouseLeave={() => setRevenueHover(null)}
+              onMouseMove={(e) => {
+                if (!revenueData.data.length) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const innerWidth = rect.width - 48; // padding
+                const index = Math.min(
+                  Math.max(Math.round((x - 24) / (innerWidth / (revenueData.data.length - 1))), 0),
+                  revenueData.data.length - 1
+                );
+                
+                const val = revenueData.data[index];
+                const max = Math.max(...revenueData.data, 100);
+                const plotY = 300 - (val / max) * 300 * 0.8 - 20;
+
+                setRevenueHover({
+                  index,
+                  x: (index / (revenueData.data.length - 1)) * 100,
+                  y: (plotY / 300) * 100,
+                  value: val,
+                  label: revenueData.labels[index]
+                });
+              }}
+            >
+               {/* Fixed Selection Header */}
+               <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none z-10 h-10">
+                  <div className="flex flex-col">
+                     <span className="text-[10px] font-black text-earth-mut/40 uppercase tracking-[0.2em] leading-none mb-1">
+                        {revenueHover ? revenueHover.label : "Revenue Trends"}
+                     </span>
+                     <div className="flex items-center gap-2">
+                        {revenueHover && <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></div>}
+                        <span className="text-sm font-black text-earth-brown tabular-nums tracking-tighter">
+                           ₦ {revenueHover ? revenueHover.value.toLocaleString() : "Select Point"}
+                        </span>
+                     </div>
+                  </div>
+                  {revenueHover && (
+                    <div className="px-3 py-1 bg-yellow-500/10 rounded-full">
+                       <span className="text-[8px] font-black text-yellow-600 uppercase tracking-widest">Active Insight</span>
+                    </div>
+                  )}
+               </div>
                {loading ? (
                  <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-earth-primary" /></div>
                ) : (
@@ -282,17 +331,44 @@ export default function Reports() {
                     <div className="flex-1 flex items-center justify-center text-[10px] font-black text-earth-mut uppercase tracking-widest">No data available</div>
                   ) : (
                     <>
-                      <div className="flex-1 mt-4">
+                      <div className="flex-1 mt-4 relative">
                           <svg className="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
                             <path d={getLinePath(revenueData.data)} fill="none" stroke="#eab308" strokeWidth="4" strokeLinecap="round" />
                             <path d={getAreaPath(revenueData.data)} fill="url(#revGrad)" opacity="0.1" />
+                            
+                            {/* Hover Marker */}
+                            {revenueHover && (
+                               <circle 
+                                  cx={(revenueHover.index / (revenueData.data.length - 1)) * 1000} 
+                                  cy={(revenueHover.y * 300) / 100} 
+                                  r="8" 
+                                  fill="#eab308" 
+                                  stroke="white" 
+                                  strokeWidth="3"
+                                  className="drop-shadow-lg"
+                               />
+                            )}
+
                             <defs>
                               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#eab308" /><stop offset="100%" stopColor="#0a0a0a" /></linearGradient>
                             </defs>
                           </svg>
+                           {/* Vertical Selection Line */}
+                           {revenueHover && (
+                              <div 
+                                 className="absolute top-0 bottom-0 pointer-events-none border-l-2 border-dashed border-yellow-500/20"
+                                 style={{ left: `${revenueHover.x}%` }}
+                              />
+                           )}
                       </div>
-                      <div className="flex justify-between mt-4 text-[9px] font-black text-earth-mut uppercase tracking-widest">
-                        {revenueData.labels.map((l, i) => <span key={i}>{l}</span>)}
+                      <div className="flex justify-between mt-6 text-[8px] font-black text-earth-mut/60 uppercase tracking-widest px-2">
+                        {revenueData.labels.map((l, i) => {
+                          // Only show every 2nd label on mobile for 1y, every 5th for 30d
+                          const skip = range === '1y' && i % 2 !== 0;
+                          const skip30 = range === '30d' && i % 5 !== 0;
+                          if (skip || skip30) return <span key={i} className="flex-1"></span>;
+                          return <span key={i} className={cn("flex-1 text-center transition-colors", revenueHover?.index === i && "text-earth-primary")}>{l}</span>
+                        })}
                       </div>
                     </>
                   )}
@@ -303,12 +379,18 @@ export default function Reports() {
         </Card>
 
         {/* BOOKINGS ANALYTICS (Grouped Bar Chart) */}
-        <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
-          <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+        <Card className="shadow-lg bg-earth-card-alt rounded-[1.5rem]">
+          <CardHeader className="pb-4 bg-earth-card/50 pt-6 px-6">
             <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest flex items-center gap-2"><BarChart3 size={14} className="text-blue-400" /> Bookings Analytics</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="w-full h-[280px] relative bg-earth-card rounded-2xl border border-earth-dark/10 shadow-inner p-6 flex flex-col group overflow-hidden">
+            <div className="w-full h-[320px] relative bg-earth-card rounded-3xl shadow-lg p-6 flex flex-col group">
+               {/* Sidebar Selection Detail */}
+               {loading === false && bookingsAnalytics.total.length > 0 && (
+                 <div className="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-none z-10 h-10">
+                    <span className="text-[10px] font-black text-earth-mut/40 uppercase tracking-widest">Analytics Monitor Mode</span>
+                 </div>
+               )}
                {loading ? (
                  <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-earth-primary" /></div>
                ) : (
@@ -317,24 +399,40 @@ export default function Reports() {
                     <div className="flex-1 flex items-center justify-center text-[10px] font-black text-earth-mut uppercase tracking-widest">No data available</div>
                   ) : (
                     <>
-                      <div className="flex-1 flex items-end justify-around gap-4 px-2">
+                      <div className="flex-1 flex items-end justify-between gap-1 px-1">
                           {bookingsAnalytics.labels.map((l, i) => {
-                            const max = Math.max(...bookingsAnalytics.total, 1);
+                            const max = Math.max(...bookingsAnalytics.total, 5); // Ensure scale even with low data
                             const tHeight = (bookingsAnalytics.total[i] / max) * 100;
                             const cHeight = (bookingsAnalytics.completed[i] / max) * 100;
                             return (
-                              <div key={i} className="flex-1 flex items-end gap-1 max-w-[40px]">
-                                <div className="flex-1 bg-earth-mut/20 rounded-t-md transition-all duration-700" style={{ height: `${tHeight}%` }}></div>
-                                <div className="flex-1 bg-blue-400 rounded-t-md transition-all duration-700" style={{ height: `${cHeight}%` }}></div>
+                              <div key={i} className="flex-1 flex flex-col items-center gap-2 group/bar">
+                                <div className="w-full flex items-end justify-center gap-1 h-[160px] relative">
+                                  {/* Bar Selection Display */}
+                                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center opacity-0 group-hover/bar:opacity-100 transition-all z-20 pointer-events-none">
+                                     <span className="text-[7px] font-black text-earth-mut uppercase tracking-tighter">{l}</span>
+                                     <span className="text-[10px] font-black text-earth-brown tabular-nums leading-none">
+                                        {bookingsAnalytics.completed[i]}<span className="text-earth-mut/40">/</span>{bookingsAnalytics.total[i]}
+                                     </span>
+                                  </div>
+                                  <div className="w-[35%] bg-earth-mut/10 rounded-full transition-all duration-700 group-hover/bar:bg-earth-mut/30" style={{ height: `${tHeight}%` }}></div>
+                                  <div className="w-[35%] bg-blue-500 rounded-full transition-all duration-700 group-hover/bar:bg-blue-600 shadow-sm" style={{ height: `${cHeight}%` }}></div>
+                                </div>
+                                <span className={cn(
+                                  "text-[7px] font-black uppercase tracking-tighter truncate w-full text-center transition-colors px-0.5", 
+                                  bookingsAnalytics.total[i] > 0 ? "text-earth-brown" : "text-earth-mut/30"
+                                )}>
+                                  {(range === '1y' && i % 2 !== 0) || (range === '30d' && i % 5 !== 0) ? "" : l}
+                                </span>
                               </div>
                             )
                           })}
                       </div>
-                      <div className="mt-4 flex justify-between items-center text-[8px] font-black tracking-widest uppercase">
+                      <div className="mt-6 flex justify-between items-center text-[8px] font-black tracking-widest uppercase border-t border-earth-dark/5 pt-4">
                           <div className="flex gap-4">
-                            <span className="flex items-center gap-1.5"><div className="w-2h-2 bg-earth-mut/20 rounded-full"></div> Total</span>
-                            <span className="flex items-center gap-1.5"><div className="w-2h-2 bg-blue-400 rounded-full"></div> Completed</span>
+                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-earth-mut/30 rounded-full"></div> Total</span>
+                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-blue-400 rounded-full"></div> Completed</span>
                           </div>
+                          <span className="text-earth-mut">Timeframe: {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : 'Last Year'}</span>
                       </div>
                     </>
                   )}
@@ -347,18 +445,18 @@ export default function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* SERVICE DISTRIBUTION (Donut) */}
-        <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
-          <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+        <Card className="shadow-lg bg-earth-card-alt rounded-[1.5rem]">
+          <CardHeader className="pb-4 bg-earth-card/50 pt-6 px-6">
             <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Service Distribution</CardTitle>
           </CardHeader>
           <CardContent className="p-8 flex items-center justify-center min-h-[300px]">
-             <DonutChart data={serviceUsage} colors={['#eab308', '#10b981', '#3b82f6', '#f97316']} />
+             <DonutChart data={serviceUsage} colors={CHART_COLORS} />
           </CardContent>
         </Card>
 
         {/* JOB STATUS DISTRIBUTION (Donut) */}
-        <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
-          <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+        <Card className="shadow-lg bg-earth-card-alt rounded-[1.5rem]">
+          <CardHeader className="pb-4 bg-earth-card/50 pt-6 px-6">
             <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Job Status Analysis</CardTitle>
           </CardHeader>
           <CardContent className="p-8 flex items-center justify-center min-h-[300px]">
@@ -367,8 +465,8 @@ export default function Reports() {
         </Card>
 
         {/* OPERATOR PERFORMANCE (Bar list) */}
-        <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
-          <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+        <Card className="shadow-lg bg-earth-card-alt rounded-[1.5rem]">
+          <CardHeader className="pb-4 bg-earth-card/50 pt-6 px-6">
             <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Top Performers</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -394,41 +492,44 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* FARMER ANALYTICS (Wide Card) */}
+      {/* TRACTOR PROFITABILITY (Wide Card) */}
       <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem]">
         <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
-          <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Farmer Network Growth Trends</CardTitle>
+          <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Tractor Wise Profitability (Net Revenue)</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="w-full h-[240px] relative bg-earth-card rounded-2xl shadow-inner p-4 flex flex-col group overflow-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {loading ? (
-                <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-earth-green" /></div>
+                <div className="col-span-full py-20 flex items-center justify-center"><Loader2 className="animate-spin text-earth-primary" /></div>
+              ) : tractorProfitability.length === 0 ? (
+                <div className="col-span-full py-20 flex items-center justify-center text-[10px] font-black text-earth-mut uppercase tracking-widest">No profitability data available</div>
               ) : (
-                <>
-                {farmerGrowth.data.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-[10px] font-black text-earth-mut uppercase tracking-widest">No registration data</div>
-                ) : (
-                  <>
-                    <div className="flex-1 mt-2">
-                        <svg className="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
-                          <path d={getLinePath(farmerGrowth.data)} fill="none" stroke="#10b981" strokeWidth="5" strokeLinecap="round" />
-                          <path d={getAreaPath(farmerGrowth.data)} fill="url(#nodeGrad2)" />
-                          <defs>
-                            <linearGradient id="nodeGrad2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.15" /><stop offset="100%" stopColor="#10b981" stopOpacity="0" /></linearGradient>
-                          </defs>
-                        </svg>
+                tractorProfitability.map((item, i) => {
+                  const max = Math.max(...tractorProfitability.map(t => t.revenue), 1);
+                  const percentage = (item.revenue / max) * 100;
+                  return (
+                    <div key={i} className="p-5 bg-white rounded-2xl border border-earth-dark/5 shadow-sm hover:shadow-md transition-all group">
+                       <div className="flex justify-between items-start mb-4">
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-black uppercase text-earth-mut tracking-widest">Fleet Unit</p>
+                             <h4 className="text-sm font-black text-earth-brown tracking-tight">{item.name}</h4>
+                          </div>
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-earth-green flex items-center justify-center">
+                             <BarChart3 size={14} />
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase">
+                             <span className="text-earth-mut">Earnings</span>
+                             <span className="text-earth-brown">₦ {item.revenue.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-earth-card rounded-full overflow-hidden">
+                             <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
+                          </div>
+                       </div>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
-                        <div className="flex gap-4">
-                          {farmerGrowth.labels.map((l, i) => (
-                            <span key={i} className="text-[8px] font-black text-earth-mut uppercase tracking-widest">{l}</span>
-                          ))}
-                        </div>
-                        <span className="text-2xl font-black text-earth-brown tracking-tighter">{farmerGrowth.data.reduce((a,b) => a+b, 0)} <span className="text-xs font-bold text-earth-mut uppercase">Total Registrations</span></span>
-                    </div>
-                  </>
-                )}
-                </>
+                  );
+                })
               )}
           </div>
         </CardContent>

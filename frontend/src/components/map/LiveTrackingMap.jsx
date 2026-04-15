@@ -201,7 +201,8 @@ export default function LiveTrackingMap({
   const [remainingEtaMin, setRemainingEtaMin] = useState('--');
   const [statusText, setStatusText] = useState('Initializing map...');
   const [errorText, setErrorText] = useState('');
-  const [tileUrl, setTileUrl] = useState(OSM_FALLBACK_TILES);
+  const [tileUrl, setTileUrl] = useState(OPENFREE_TILES);
+  const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(false);
 
   const socketRef = useRef(null);
   const watchIdRef = useRef(null);
@@ -375,7 +376,7 @@ export default function LiveTrackingMap({
 
     socket.on('connect', () => {
       setStatusText('Connected. Waiting for live updates...');
-      socket.emit('tracking:join', { roomId, role, bookingId });
+      socket.emit('tracking:join', { roomId, role, bookingId, userId: user?.id });
     });
 
     socket.on('tracking:state', (payload) => {
@@ -510,26 +511,26 @@ export default function LiveTrackingMap({
 
   return (
     <div 
-      className={cn("relative w-full flex flex-col overflow-hidden bg-neutral-100", className)}
+      className={cn("relative z-0 w-full flex flex-col overflow-hidden bg-neutral-100", className)}
       style={{ minHeight: '600px', height: '100%' }}
     >
-      <div className="absolute z-[1000] top-6 left-6 right-6 md:right-auto md:w-[280px] bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-neutral-200 p-3 transition-all">
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{role} mode</p>
+      <div className="absolute z-[1000] top-3 left-3 right-3 md:top-6 md:left-6 md:right-auto md:w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-neutral-200/50 p-2.5 md:p-3 transition-all duration-300">
+        <div className="flex justify-between items-center mb-1.5 md:mb-2 px-1">
+          <p className="text-[7px] md:text-[8px] font-black text-neutral-400 uppercase tracking-[0.2em]">{role} mode</p>
           <div className="flex gap-1.5 items-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-            <p className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">{statusText.split('.')[0]}</p>
+            <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+            <p className="text-[8px] md:text-[9px] font-bold text-blue-600 uppercase tracking-tighter">{statusText.split('.')[0]}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-neutral-50/50 p-2 rounded-lg border border-neutral-100">
-            <p className="text-[8px] font-bold text-neutral-400 uppercase">Dist</p>
-            <p className="text-sm font-black text-neutral-800">{remainingDistanceKm}<span className="text-[8px] ml-0.5 uppercase opacity-40">km</span></p>
+        <div className="grid grid-cols-2 gap-2 md:gap-3 mb-2 md:mb-3">
+          <div className="bg-neutral-50/80 p-1.5 md:p-2 rounded-xl border border-neutral-100/50">
+            <p className="text-[7px] md:text-[8px] font-bold text-neutral-400 uppercase">Dist</p>
+            <p className="text-xs md:text-sm font-black text-neutral-800 tabular-nums">{remainingDistanceKm}<span className="text-[7px] md:text-[8px] ml-0.5 uppercase opacity-40">km</span></p>
           </div>
-          <div className="bg-neutral-50/50 p-2 rounded-lg border border-neutral-100">
-            <p className="text-[8px] font-bold text-neutral-400 uppercase">ETA</p>
-            <p className="text-sm font-black text-neutral-800">{remainingEtaMin}<span className="text-[8px] ml-0.5 uppercase opacity-40">min</span></p>
+          <div className="bg-neutral-50/80 p-1.5 md:p-2 rounded-xl border border-neutral-100/50">
+            <p className="text-[7px] md:text-[8px] font-bold text-neutral-400 uppercase">ETA</p>
+            <p className="text-xs md:text-sm font-black text-neutral-800 tabular-nums">{remainingEtaMin}<span className="text-[7px] md:text-[8px] ml-0.5 uppercase opacity-40">min</span></p>
           </div>
         </div>
 
@@ -541,22 +542,33 @@ export default function LiveTrackingMap({
         )}
 
         {instructions.length > 0 && (
-          <div className="space-y-2.5">
-            <div className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100">
-              <p className="text-[7px] font-bold uppercase opacity-70 tracking-widest text-center mb-0.5">Next Command</p>
-              <p className="text-[11px] font-black text-center leading-tight uppercase tracking-tight">{instructions[0]}</p>
+          <div className="space-y-2">
+            <div className="p-2 md:p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200/50">
+              <p className="text-[6px] md:text-[7px] font-bold uppercase opacity-80 tracking-widest text-center mb-0.5 leading-none">Next Command</p>
+              <p className="text-[10px] md:text-[11px] font-black text-center leading-tight uppercase tracking-tight">{instructions[0]}</p>
             </div>
             
-            <div className="max-h-[100px] overflow-y-auto pr-1.5 scrollbar-hide">
-              <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 px-0.5">Upcoming</p>
-              <ul className="space-y-1.5">
-                {instructions.slice(1).map((step, idx) => (
-                  <li key={idx} className="flex items-start gap-2 group px-0.5">
-                    <span className="text-[9px] font-black text-neutral-300 mt-0.5">{idx + 2}</span>
-                    <p className="text-[10px] font-bold text-neutral-500 leading-tight group-hover:text-neutral-800 transition-colors uppercase tracking-tight">{step}</p>
-                  </li>
-                ))}
-              </ul>
+            <div className="space-y-1">
+              <button 
+                onClick={() => setIsInstructionsExpanded(!isInstructionsExpanded)}
+                className="w-full flex justify-between items-center px-2 py-1 text-[7px] md:text-[8px] font-black text-neutral-400 uppercase tracking-widest hover:text-neutral-600 transition-colors"
+              >
+                <span>Upcoming turns</span>
+                <span className="text-[6px]">{isInstructionsExpanded ? "Collapse" : "Expand"}</span>
+              </button>
+              
+              {isInstructionsExpanded && (
+                <div className="max-h-[80px] md:max-h-[120px] overflow-y-auto pr-1.5 scrollbar-hide animate-in fade-in slide-in-from-top-1 duration-200">
+                  <ul className="space-y-1.5 py-1">
+                    {instructions.slice(1).map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2 group px-1 border-l-2 border-neutral-100 hover:border-blue-200 transition-colors py-0.5">
+                        <span className="text-[8px] font-black text-neutral-300 mt-0.5">{idx + 2}</span>
+                        <p className="text-[9px] font-bold text-neutral-500 leading-tight group-hover:text-neutral-800 transition-colors uppercase tracking-tight">{step}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -565,13 +577,13 @@ export default function LiveTrackingMap({
           type="button"
           onClick={() => setIsAutoFollow((prev) => !prev)}
           className={cn(
-            "mt-3 w-full h-8 rounded-lg border text-[9px] font-black uppercase tracking-widest transition-all active:scale-95",
+            "mt-2 md:mt-3 w-full h-8 rounded-xl border text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all active:scale-95",
             isAutoFollow 
-              ? "bg-neutral-900 text-white border-neutral-900 shadow-lg shadow-neutral-200"
+              ? "bg-neutral-900 text-white border-neutral-900 shadow-md md:shadow-lg shadow-neutral-200"
               : "bg-white text-neutral-800 border-neutral-200 hover:bg-neutral-50"
           )}
         >
-          {isAutoFollow ? 'Lock On' : 'Unlock Map'}
+          {isAutoFollow ? 'Focus Locked' : 'Unlock Map'}
         </button>
       </div>
 

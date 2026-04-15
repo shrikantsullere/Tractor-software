@@ -1,4 +1,5 @@
 import * as adminService from '../../services/admin.service.js';
+import NotificationService from '../../services/notification.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 
 export const getPendingBookings = async (req, res) => {
@@ -40,6 +41,21 @@ export const assignBooking = async (req, res) => {
       broadcastFarmerDestination(booking.farmerLatitude, booking.farmerLongitude, 'default-room');
     }
     
+    // Trigger Operator Notification (Async)
+    const io = req.app.get('io');
+    NotificationService.notifyUser(io, operatorId, 'operator', {
+      message: "You have been assigned a new job",
+      type: "assignment",
+      metadata: { bookingId: booking.id }
+    });
+
+    // Trigger Farmer Notification (Async)
+    NotificationService.notifyUser(io, booking.farmerId, 'farmer', {
+      message: "Operator assigned to your job",
+      type: "assignment",
+      metadata: { bookingId: booking.id, operatorId }
+    });
+    
     return sendSuccess(res, booking, "Operator assigned successfully");
   } catch (error) {
     const statusCode = error.message.includes('NOT_FOUND') || error.message.includes('not found') ? 404 : 400;
@@ -58,6 +74,15 @@ export const scheduleBooking = async (req, res) => {
     }
 
     const booking = await adminService.scheduleBooking(bookingId, scheduledDate);
+
+    // Trigger Farmer Notification (Async)
+    const io = req.app.get('io');
+    NotificationService.notifyUser(io, booking.farmerId, 'farmer', {
+      message: "Your job has been scheduled",
+      type: "booking",
+      metadata: { bookingId: booking.id, scheduledAt: booking.scheduledAt }
+    });
+
     return sendSuccess(res, booking, "Booking scheduled successfully");
   } catch (error) {
     const statusCode = error.message.includes('NOT_FOUND') || error.message.includes('not found') ? 404 : 400;

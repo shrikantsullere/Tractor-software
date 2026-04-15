@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { LayoutDashboard, Compass, Radio, Calendar, Users, Briefcase, ListCollapse, TrendingUp, SettingsIcon, LogOut, ChevronRight, Bell, Tractor, CheckCircle2, AlertCircle, MessageSquare, Truck, Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -106,7 +107,7 @@ export default function AdminLayout() {
       {/* Overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] animate-in fade-in duration-300"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
@@ -114,7 +115,7 @@ export default function AdminLayout() {
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[1000] animate-in fade-in duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -123,7 +124,7 @@ export default function AdminLayout() {
       <aside 
         ref={sidebarRef}
         className={cn(
-          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-50 shadow-2xl overflow-hidden",
+          "bg-primary border-r border-primary/10 flex flex-col transition-all duration-300 ease-in-out h-screen fixed lg:sticky top-0 z-[1001] shadow-2xl overflow-hidden",
           isSidebarOpen ? "w-[240px] translate-x-0" : "w-[240px] -translate-x-[240px]"
         )}
       >
@@ -182,7 +183,7 @@ export default function AdminLayout() {
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         
         {/* Dynamic App Header */}
-        <header className="h-16 bg-earth-card/80 backdrop-blur-md border-b border-earth-dark/10 flex items-center justify-between px-4 sm:px-6 z-40 shrink-0 shadow-sm sticky top-0">
+        <header className="h-16 bg-earth-card/80 backdrop-blur-md border-b border-earth-dark/10 flex items-center justify-between px-4 sm:px-6 z-[1002] shrink-0 shadow-sm sticky top-0">
           <div className="flex items-center gap-3 sm:gap-4">
             <button 
               id="sidebar-toggle"
@@ -199,60 +200,9 @@ export default function AdminLayout() {
           </div>
           
           <div className="flex items-center gap-4 text-sm relative">
-            <div ref={notificationRef} className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={cn(
-                  "relative p-2 bg-earth-card-alt hover:bg-earth-card border transition-all rounded-xl",
-                  showNotifications ? "border-earth-primary text-earth-primary shadow-[0_0_15px_rgba(46,125,50,0.2)]" : "border-earth-dark/15 text-earth-sub hover:text-earth-primary"
-                )}
-              >
-                <Bell size={20} strokeWidth={2.5} />
-                {notifications.some(n => n.unread) && (
-                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-neutral-900 shadow-sm animate-pulse"></span>
-                )}
-              </button>
+            <NotificationDropdown />
 
-              {/* Notification Dropdown */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-[320px] sm:w-[380px] bg-earth-card border border-earth-dark/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                  <div className="p-4 border-b border-earth-dark/10 flex items-center justify-between bg-earth-card-alt/50">
-                    <h3 className="font-black text-xs uppercase tracking-widest text-earth-brown">Notifications</h3>
-                    <button className="text-[10px] uppercase font-black text-earth-primary hover:text-earth-brown transition-colors">Mark all read</button>
-                  </div>
-                  <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
-                    {notifications.length > 0 ? notifications.map((n) => (
-                      <div key={n.id} className={cn(
-                        "p-4 border-b border-earth-dark/10/50 hover:bg-earth-card-alt/50 transition-colors cursor-pointer group",
-                        n.unread && "bg-earth-primary/[0.02]"
-                      )}>
-                        <div className="flex gap-4">
-                          <div className={cn("w-10 h-10 rounded-xl bg-earth-card border border-earth-dark/10 flex items-center justify-center shrink-0 group-hover:border-earth-dark/15 transition-colors", n.color)}>
-                            <n.icon size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-0.5">
-                              <p className="text-sm font-black text-earth-brown group-hover:text-earth-primary transition-colors">{n.title}</p>
-                              <span className="text-[10px] font-bold text-earth-mut whitespace-nowrap">{n.time}</span>
-                            </div>
-                            <p className="text-xs text-earth-sub leading-relaxed line-clamp-2">{n.message}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="p-10 text-center">
-                        <p className="text-xs font-bold text-earth-mut uppercase tracking-widest">No new alerts</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3 bg-earth-card-alt/30 text-center">
-                    <button className="text-[10px] uppercase font-black text-earth-mut hover:text-earth-brown transition-colors">See all alerts</button>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="h-6 w-px bg-earth-card-alt hidden sm:block"></div>
+            <div className="h-6 w-px bg-earth-dark/10 hidden sm:block"></div>
             
             <div className="flex items-center gap-3 cursor-pointer group">
               <div className="text-right hidden lg:block">

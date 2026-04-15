@@ -17,6 +17,38 @@ const getStartDate = (range) => {
 };
 
 /**
+ * Pre-fills a map with labels for the given range to ensure continuous data
+ */
+const initializeReportMap = (range, defaultValue = 0) => {
+  const map = new Map();
+  const now = new Date();
+  
+  if (range === '1y') {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(d);
+      map.set(label, typeof defaultValue === 'object' ? { ...defaultValue } : defaultValue);
+    }
+  } else if (range === '30d') {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const label = `${d.getDate()} ${new Intl.DateTimeFormat('en-US', { month: 'short' }).format(d)}`;
+      map.set(label, typeof defaultValue === 'object' ? { ...defaultValue } : defaultValue);
+    }
+  } else {
+    // 7d
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const label = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(d);
+      map.set(label, typeof defaultValue === 'object' ? { ...defaultValue } : defaultValue);
+    }
+  }
+  return map;
+};
+
+/**
  * Get revenue report based on time range
  */
 export const getRevenueReport = async (range = '7d') => {
@@ -34,7 +66,7 @@ export const getRevenueReport = async (range = '7d') => {
     orderBy: { createdAt: 'asc' }
   });
 
-  const totals = new Map();
+  const totals = initializeReportMap(range, 0);
   
   payments.forEach(p => {
     const date = new Date(p.createdAt);
@@ -48,7 +80,9 @@ export const getRevenueReport = async (range = '7d') => {
       label = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
     }
 
-    totals.set(label, (totals.get(label) || 0) + p.amount);
+    if (totals.has(label)) {
+      totals.set(label, totals.get(label) + p.amount);
+    }
   });
 
   return {
@@ -97,7 +131,7 @@ export const getBookingsAnalytics = async (range = '7d') => {
     select: { status: true, createdAt: true }
   });
 
-  const analytics = new Map();
+  const analytics = initializeReportMap(range, { total: 0, completed: 0 });
 
   bookings.forEach(b => {
     const date = new Date(b.createdAt);
@@ -107,12 +141,11 @@ export const getBookingsAnalytics = async (range = '7d') => {
         ? `${date.getDate()} ${new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date)}`
         : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
 
-    if (!analytics.has(label)) {
-      analytics.set(label, { total: 0, completed: 0 });
+    if (analytics.has(label)) {
+        const current = analytics.get(label);
+        current.total += 1;
+        if (b.status?.toUpperCase() === 'COMPLETED') current.completed += 1;
     }
-    const current = analytics.get(label);
-    current.total += 1;
-    if (b.status === 'completed') current.completed += 1;
   });
 
   return {
@@ -150,6 +183,42 @@ export const getOperatorPerformance = async (range = '7d') => {
     name: operators.find(o => o.id === p.operatorId)?.name || 'Unknown',
     completedJobs: p._count.id
   })).sort((a, b) => b.completedJobs - a.completedJobs).slice(0, 5);
+};
+
+/**
+ * Get tractor profitability report (Net Revenue per machine)
+ */
+export const getTractorProfitabilityReport = async (range = '7d') => {
+  const startDate = getStartDate(range);
+
+  // Get total price from all jobs associated with a tractor
+  const stats = await prisma.booking.groupBy({
+    by: ['tractorId'],
+    where: {
+      createdAt: { gte: startDate },
+      tractorId: { not: null },
+      // We don't filter by 'COMPLETED' only because even partial jobs generate value in this context
+      // but we filter out definitely unpaid/cancelled ones if needed. 
+      // For now, any job tied to a tractor is an "earning" activity.
+    },
+    _sum: {
+      totalPrice: true
+    }
+  });
+
+  const tractorIds = stats.map(s => s.tractorId);
+  const tractors = await prisma.tractor.findMany({
+    where: { id: { in: tractorIds } },
+    select: { id: true, name: true, model: true }
+  });
+
+  return stats.map(s => {
+    const tractor = tractors.find(t => t.id === s.tractorId);
+    return {
+      name: tractor ? `${tractor.name} (${tractor.model})` : 'Deleted Unit',
+      revenue: s._sum.totalPrice || 0
+    };
+  }).sort((a, b) => b.revenue - a.revenue);
 };
 
 /**

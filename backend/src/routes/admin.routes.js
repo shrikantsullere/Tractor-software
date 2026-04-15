@@ -54,6 +54,7 @@ router.get('/reports/farmers', reportController.getFarmers);
 router.get('/reports/bookings-analytics', reportController.getBookingsAnalytics);
 router.get('/reports/operator-performance', reportController.getOperatorPerformance);
 router.get('/reports/job-status', reportController.getJobStatusDistribution);
+router.get('/reports/tractor-profitability', reportController.getTractorProfitability);
 router.get('/reports/export', reportController.getExportData);
 
 // System Settings - Global Configuration

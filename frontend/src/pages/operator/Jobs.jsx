@@ -179,15 +179,18 @@ export default function Jobs() {
                   {currentAction.label} <ArrowRight size={18} />
                 </Link>
               ) : (
-                <div className="flex-1 bg-earth-card-alt text-earth-mut font-black px-6 py-4 rounded-xl flex items-center justify-center gap-2.5 text-sm uppercase tracking-widest border border-earth-dark/15">
-                  No Active Actions
-                </div>
+                <Link 
+                  to="/operator/status"
+                  className="flex-1 bg-earth-card-alt text-earth-brown hover:bg-earth-card font-black px-6 py-4 rounded-xl flex items-center justify-center gap-2.5 text-sm uppercase tracking-widest border border-earth-dark/15 transition-all"
+                >
+                  Change Status
+                </Link>
               )}
               {activeJob ? (
                 <button
                   type="button"
                   onClick={handleStartJourney}
-                  className="sm:w-[40%] bg-earth-card-alt text-earth-sub font-black px-4 py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-earth-card hover:text-earth-brown transition-all border border-earth-dark/15 uppercase tracking-widest text-xs"
+                  className="sm:w-[40%] bg-earth-accent text-white font-black px-4 py-4 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all border-none shadow-lg shadow-earth-accent/20 uppercase tracking-widest text-xs"
                 >
                   <Navigation2 size={16} /> Start Journey
                 </button>

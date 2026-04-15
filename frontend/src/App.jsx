@@ -4,6 +4,7 @@ import { Tractor, UserCircle, Shield, Briefcase, Lock, Smartphone, Mail, ArrowLe
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { BookingProvider } from './context/BookingContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Button } from './components/ui/Button';
 import Register from './pages/Register';
 import LandingPage from './pages/LandingPage';
@@ -64,8 +65,6 @@ function Login() {
   const auth = useAuth();
   const { login, isAuthenticated, user } = auth || {};
   
-  // Debug log to catch the error if it persists
-  console.log('[Login] Auth Context:', auth);
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -276,55 +275,57 @@ function Login() {
 function App() {
   return (
     <AuthProvider>
-      <BookingProvider>
-        <SettingsProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Farmer App Routes */}
-              <Route path="/farmer" element={<ProtectedRoute allowedRole="farmer"><FarmerLayout /></ProtectedRoute>}>
-                <Route index element={<FarmerHome />} />
-                <Route path="book" element={<BookTractor />} />
-                <Route path="track" element={<TrackJob />} />
-                <Route path="history" element={<History />} />
-                <Route path="payments" element={<Payments />} />
-                <Route path="profile" element={<Profile />} />
-              </Route>
-
-              {/* Admin Dashboard Routes */}
-              <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminLayout /></ProtectedRoute>}>
-                <Route index element={<Dashboard />} />
-                <Route path="assignments" element={<Assignments />} />
-                <Route path="tracking" element={<LiveTracking />} />
-                <Route path="bookings" element={<Bookings />} />
-                <Route path="farmers" element={<Farmers />} />
-                <Route path="operators" element={<Operators />} />
-                <Route path="fleet" element={<Tractors />} />
-                <Route path="payments" element={<AdminPayments />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="settings" element={<Settings />}>
-                  <Route path=":tab" element={<Settings />} />
+      <NotificationProvider>
+        <BookingProvider>
+          <SettingsProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Farmer App Routes */}
+                <Route path="/farmer" element={<ProtectedRoute allowedRole="farmer"><FarmerLayout /></ProtectedRoute>}>
+                  <Route index element={<FarmerHome />} />
+                  <Route path="book" element={<BookTractor />} />
+                  <Route path="track" element={<TrackJob />} />
+                  <Route path="history" element={<History />} />
+                  <Route path="payments" element={<Payments />} />
+                  <Route path="profile" element={<Profile />} />
                 </Route>
-              </Route>
 
-              {/* Operator Panel Routes */}
-              <Route path="/operator" element={<ProtectedRoute allowedRole="operator"><OperatorLayout /></ProtectedRoute>}>
-                <Route index element={<Jobs />} />
-                <Route path="navigation" element={<Navigation />} />
-                <Route path="status" element={<Status />} />
-                <Route path="fuel" element={<Fuel />} />
-                <Route path="profile" element={<OperatorProfile />} />
-              </Route>
-              
-              {/* Catch-all redirect */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </SettingsProvider>
-      </BookingProvider>
+                {/* Admin Dashboard Routes */}
+                <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminLayout /></ProtectedRoute>}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="assignments" element={<Assignments />} />
+                  <Route path="tracking" element={<LiveTracking />} />
+                  <Route path="bookings" element={<Bookings />} />
+                  <Route path="farmers" element={<Farmers />} />
+                  <Route path="operators" element={<Operators />} />
+                  <Route path="fleet" element={<Tractors />} />
+                  <Route path="payments" element={<AdminPayments />} />
+                  <Route path="reports" element={<Reports />} />
+                  <Route path="settings" element={<Settings />}>
+                    <Route path=":tab" element={<Settings />} />
+                  </Route>
+                </Route>
+
+                {/* Operator Panel Routes */}
+                <Route path="/operator" element={<ProtectedRoute allowedRole="operator"><OperatorLayout /></ProtectedRoute>}>
+                  <Route index element={<Jobs />} />
+                  <Route path="navigation" element={<Navigation />} />
+                  <Route path="status" element={<Status />} />
+                  <Route path="fuel" element={<Fuel />} />
+                  <Route path="profile" element={<OperatorProfile />} />
+                </Route>
+                
+                {/* Catch-all redirect */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </SettingsProvider>
+        </BookingProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

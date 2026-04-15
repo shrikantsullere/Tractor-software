@@ -134,7 +134,7 @@ export default function Bookings() {
               placeholder="Search nodes or farmers..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-xs focus:ring-2 focus:ring-earth-primary/50 outline-none w-full transition-all"
+              className="pl-10 pr-4 h-11 bg-earth-card rounded-xl text-earth-brown font-bold text-xs focus:ring-2 focus:ring-earth-primary/50 outline-none w-full transition-all shadow-inner"
             />
           </div>
           
@@ -142,7 +142,7 @@ export default function Bookings() {
             <select 
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 bg-earth-card border border-earth-dark/15 rounded-xl text-earth-brown font-bold text-[10px] uppercase tracking-widest px-4 focus:ring-2 focus:ring-earth-primary/50 outline-none cursor-pointer flex-1 sm:w-36"
+              className="h-11 bg-earth-card rounded-xl text-earth-brown font-bold text-[10px] uppercase tracking-widest px-4 focus:ring-2 focus:ring-earth-primary/50 outline-none cursor-pointer flex-1 sm:w-36 shadow-inner"
             >
               <option value="All">All Status</option>
               <option value="Completed">Completed</option>
@@ -477,10 +477,10 @@ export default function Bookings() {
                 </div>
 
                 {/* Modal Footer - Registry Sync Action */}
-                <div className="px-6 py-4 border-t border-earth-dark/10 bg-earth-main/10 flex justify-end shrink-0">
+                <div className="px-6 py-4 shadow-md bg-earth-main/10 flex justify-end shrink-0">
                   <Button 
                     onClick={() => setIsViewModalOpen(false)}
-                    className="bg-white hover:bg-earth-card-alt text-earth-sub hover:text-earth-brown font-black uppercase text-[10px] tracking-widest px-8 h-10 rounded-xl border border-earth-dark/15 transition-all"
+                    className="bg-white hover:bg-earth-card-alt text-earth-sub hover:text-earth-brown font-black uppercase text-[10px] tracking-widest px-8 h-10 rounded-xl shadow-sm transition-all"
                   >
                     Sync Close
                   </Button>
