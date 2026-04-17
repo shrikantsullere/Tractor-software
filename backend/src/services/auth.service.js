@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 
 export const registerUser = async (userData) => {
-  const { name, email, password, phone, role } = userData;
+  const { name, password, phone, role } = userData;
+  const systemEmail = `${phone}@tractorlink.app`;
 
   const existingUser = await prisma.user.findUnique({ where: { phone } });
   if (existingUser) {
@@ -15,7 +16,7 @@ export const registerUser = async (userData) => {
   const user = await prisma.user.create({
     data: {
       name,
-      email,
+      email: systemEmail,
       passwordHash,
       phone,
       role,

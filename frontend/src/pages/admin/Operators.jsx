@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Briefcase, Plus, Search, Mail, Phone, Shield, ShieldCheck, ShieldAlert, Trash2, X, Loader2, RefreshCw, Key } from 'lucide-react';
+import { Users, Briefcase, Plus, Search, Phone, Shield, ShieldCheck, ShieldAlert, Trash2, X, Loader2, RefreshCw, Key } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -181,11 +181,6 @@ export default function Operators() {
                           <div className="flex items-center gap-2 text-xs font-bold text-earth-brown">
                              <Phone size={14} className="text-earth-primary" /> {op.phone}
                           </div>
-                          {op.email && (
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-earth-mut uppercase">
-                               <Mail size={12} className="text-earth-mut" /> {op.email}
-                            </div>
-                          )}
                        </div>
                     </td>
                     <td className="px-8 py-5">

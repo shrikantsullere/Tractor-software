@@ -11,7 +11,6 @@ export default function Register() {
   const [role, setRole] = useState('farmer');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
   const [error, setError] = useState('');
@@ -29,7 +28,7 @@ export default function Register() {
       return;
     }
 
-    const result = await register({ name, phone, email, password, role });
+    const result = await register({ name, phone, password, role });
 
     if (result.success) {
       setSuccess(true);
@@ -66,7 +65,7 @@ export default function Register() {
           <div className="mt-12 space-y-4">
                <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm">
                  <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-white font-black shrink-0">1</div>
-                 <p className="font-bold text-white">Verify your email address securely</p>
+                 <p className="font-bold text-white">Secure Phone-Based Authentication</p>
                </div>
              <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm">
                <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-white font-black shrink-0">2</div>
@@ -140,21 +139,6 @@ export default function Register() {
                         className="w-full pl-11 pr-4 py-3.5 bg-earth-card border border-earth-dark/10 rounded-2xl text-earth-brown font-bold focus:outline-none focus:border-earth-primary focus:bg-earth-card-alt transition-all shadow-inner" 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mb-1.5 block pl-1">Email Address (Optional)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-earth-mut">
-                        <Mail size={18} />
-                      </div>
-                      <input 
-                        type="email" 
-                        placeholder="name@example.com" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-earth-card border border-earth-dark/10 rounded-2xl text-earth-brown font-bold focus:outline-none focus:border-earth-primary focus:bg-earth-card-alt transition-all shadow-inner" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>

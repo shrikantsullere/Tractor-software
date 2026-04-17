@@ -136,7 +136,7 @@ export default function OperatorLayout() {
             <div className="flex items-center gap-3 cursor-pointer group">
               <div className="text-right hidden sm:block">
                 <p className="font-black text-earth-brown leading-none group-hover:text-earth-primary transition-colors italic uppercase text-xs">Op. {operatorName}</p>
-                <p className="text-[10px] text-earth-mut font-semibold mt-1 uppercase tracking-widest leading-none">{user?.email || 'Fleet Unit #T24'}</p>
+                <p className="text-[10px] text-earth-mut font-semibold mt-1 uppercase tracking-widest leading-none">{user?.phone || 'Fleet Unit #T24'}</p>
               </div>
               <div className="w-9 h-9 rounded-xl bg-earth-card-alt flex items-center justify-center text-earth-primary font-black border border-earth-dark/15 shadow-sm transition-all group-hover:border-earth-primary/50">
                 {operatorName.charAt(0)}

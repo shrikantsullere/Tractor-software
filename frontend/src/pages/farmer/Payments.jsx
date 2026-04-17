@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { CreditCard, Wallet, Building, ArrowUpRight, Download, X, CheckCircle, Clock, ShieldCheck, ChevronRight, Smartphone } from 'lucide-react';
+import { CreditCard, ArrowUpRight, X, CheckCircle, Clock, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -74,20 +74,11 @@ export default function Payments() {
     }
   }, [location.search, location.state]);
 
-  const handlePayFull = () => {
-    setPaymentPortal({ open: true, type: 'Full Settlement', amount: pendingData.totalOutstanding, targetId: 'ALL' });
-    setPaymentStep('method');
-  };
-
   const startPayment = async () => {
     try {
       setPaymentStep('processing');
       
-      if (paymentPortal.targetId === 'ALL') {
-        // Full settlement logic now individual to ensure consistency
-        alert('Bulk settlement is temporarily disabled. Please pay individual bookings.');
-        return;
-      } else if (paymentPortal.targetId === 'NEW_BOOKING') {
+      if (paymentPortal.targetId === 'NEW_BOOKING') {
         // THIS IS THE NEW ATOMIC CHECKOUT FLOW
         await api.farmer.checkout(paymentPortal.bookingData);
       } else {
@@ -110,153 +101,91 @@ export default function Payments() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-7 max-w-6xl mx-auto relative pb-24 md:pb-8">
-      {/* Compact Header */}
-      <header className="border-b border-earth-dark/10 pb-5 flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown uppercase italic">Finance & Ledger</h1>
-          <p className="text-[9px] text-earth-mut font-black uppercase tracking-widest mt-1">Real-time payment tracking & settlements</p>
-        </div>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-7 max-w-4xl mx-auto relative pb-24 md:pb-8">
+      {/* Header */}
+      <header className="border-b border-earth-dark/10 pb-5">
+        <h1 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown uppercase italic">Finance & Ledger</h1>
+        <p className="text-[9px] text-earth-mut font-black uppercase tracking-widest mt-1">Real-time payment tracking & settlements</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+      {/* Pending Bookings List */}
+      <div className="space-y-4">
+        <h3 className="font-black text-[9px] text-earth-mut uppercase tracking-widest px-1">Pending & Recent Actions</h3>
         
-        {/* Left Column: Balance & Methods */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-          {/* Balance Card - More Compact */}
-          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-            <Card className="bg-earth-dark text-earth-main border-earth-dark/10 shadow-xl relative overflow-hidden rounded-3xl group border-l-2 border-l-earth-primary">
-              <div className="absolute top-0 right-0 p-6 opacity-[0.02] transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-700">
-                <Wallet size={120} />
-              </div>
-              <CardContent className="p-6 md:p-8 relative z-10">
-                <p className="text-earth-mut text-[9px] font-black tracking-widest uppercase mb-2">Total Outstanding</p>
-                <div className="flex items-baseline gap-1.5 mb-6">
-                  <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-earth-main tabular-nums">{formatCurrency(pendingData.totalOutstanding)}</h2>
+        {isLoading ? (
+          <div className="py-20 text-center">
+            <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={32} />
+            <p className="text-[10px] font-black uppercase text-earth-mut">Syncing with Ledger...</p>
+          </div>
+        ) : pendingData.bookings.length > 0 ? pendingData.bookings.map((booking, idx) => {
+          return (
+            <motion.div 
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.03 }}
+              key={booking.id} 
+              className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row justify-between sm:items-center p-5 md:p-6 hover:shadow-[0_15px_45px_rgba(0,0,0,0.08)] transition-all group relative border-none"
+            >
+              <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => setSelectedTx(booking)}>
+                <div className="w-10 h-10 rounded-xl bg-earth-card border border-earth-dark/10 text-earth-mut flex items-center justify-center shrink-0 group-hover:text-earth-primary group-hover:border-earth-primary/20 transition-all">
+                  <ArrowUpRight size={18} className="group-hover:rotate-45 transition-transform" />
                 </div>
-                <Button 
-                  onClick={handlePayFull}
-                  disabled={pendingData.totalOutstanding <= 0 || isLoading}
-                  className="w-full bg-accent text-white hover:opacity-90 h-12 font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg shadow-accent/20 active:scale-95 transition-all"
-                >
-                  {isLoading ? 'Loading...' : 'Settle All Dues'}
-                </Button>
-                <div className="text-[8px] text-center text-earth-mut font-bold uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
-                   <ShieldCheck size={12} className="text-earth-green/50" /> Secure Gateway Active
+                <div>
+                  <p className="font-black text-xs md:text-sm text-earth-brown group-hover:text-earth-brown transition-colors uppercase italic">{booking.serviceType}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                     <p className="text-[8px] uppercase font-black tracking-widest text-earth-mut">{new Date(booking.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric'})}</p>
+                     <span className="w-1 h-1 bg-earth-card-alt rounded-full"></span>
+                     <p className="text-[8px] uppercase font-black text-earth-mut tracking-widest">#{booking.id}</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Payment Methods - Compact */}
-          <div className="space-y-3">
-            <h3 className="font-black text-[9px] text-earth-mut uppercase tracking-widest px-1">Saved Gateways</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                { label: 'Cloud Payments', sub: 'VISA, MC, RUPAY', icon: CreditCard, color: 'text-blue-500/70' },
-                { label: 'UPI Instant Hub', sub: 'GPAY, AMAZON PAY', icon: Smartphone, color: 'text-earth-green/70' },
-                { label: 'Net Banking', sub: 'ALL MAJOR BANKS', icon: Building, color: 'text-orange-500/70' }
-              ].map((m, i) => (
-                <Card key={i} className="bg-earth-card/50 border border-earth-dark/10 hover:border-earth-dark/15 cursor-pointer transition-all group rounded-2xl active:scale-[0.98]">
-                  <CardContent className="p-3.5 flex items-center gap-3.5">
-                    <div className={cn("w-9 h-9 rounded-xl bg-earth-main border border-earth-dark/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-all", m.color)}>
-                      <m.icon size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-[10px] text-earth-brown uppercase tracking-wide">{m.label}</h4>
-                      <p className="text-[8px] uppercase font-bold tracking-widest text-earth-mut mt-0.5 truncate">{m.sub}</p>
-                    </div>
-                    <ChevronRight size={14} className="text-earth-mut group-hover:text-earth-primary transition-colors" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Actions Log */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-5">
-          <div className="flex justify-between items-center mb-1 px-1">
-            <h3 className="font-black text-[9px] text-earth-mut uppercase tracking-widest">Pending & Recent Actions</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="py-20 text-center">
-                <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={32} />
-                <p className="text-[10px] font-black uppercase text-earth-mut">Syncing with Ledger...</p>
               </div>
-            ) : pendingData.bookings.length > 0 ? pendingData.bookings.map((booking, idx) => {
-              return (
-                <motion.div 
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  key={booking.id} 
-                  className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row justify-between sm:items-center p-5 md:p-6 hover:shadow-[0_15px_45px_rgba(0,0,0,0.08)] transition-all group relative border-none"
-                >
-                  <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => setSelectedTx(booking)}>
-                    <div className="w-10 h-10 rounded-xl bg-earth-card border border-earth-dark/10 text-earth-mut flex items-center justify-center shrink-0 group-hover:text-earth-primary group-hover:border-earth-primary/20 transition-all">
-                      <ArrowUpRight size={18} className="group-hover:rotate-45 transition-transform" />
-                    </div>
-                    <div>
-                      <p className="font-black text-xs md:text-sm text-earth-brown group-hover:text-earth-brown transition-colors uppercase italic">{booking.serviceType}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                         <p className="text-[8px] uppercase font-black tracking-widest text-earth-mut">{new Date(booking.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric'})}</p>
-                         <span className="w-1 h-1 bg-earth-card-alt rounded-full"></span>
-                         <p className="text-[8px] uppercase font-black text-earth-mut tracking-widest">#{booking.id}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="sm:text-right flex items-center sm:items-end justify-between sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-earth-dark/10 gap-5">
-                    <div className="hidden sm:block">
-                      <p className="font-black text-base md:text-lg text-earth-brown block tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
-                      <Badge className={cn(
-                        "mt-1 text-[8px] px-2 py-0 border-none font-black uppercase tracking-widest",
-                        booking.paymentStatus === 'full' ? 'bg-earth-primary/10 text-earth-green' : 
-                        booking.paymentStatus === 'partial' ? 'bg-blue-500/10 text-blue-400' : 
-                        'bg-orange-500/10 text-orange-400'
-                      )}>
-                        {booking.paymentStatus}
-                      </Badge>
-                    </div>
+              <div className="sm:text-right flex items-center sm:items-end justify-between sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-earth-dark/10 gap-5">
+                <div className="hidden sm:block">
+                  <p className="font-black text-base md:text-lg text-earth-brown block tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
+                  <Badge className={cn(
+                    "mt-1 text-[8px] px-2 py-0 border-none font-black uppercase tracking-widest",
+                    booking.paymentStatus === 'full' ? 'bg-earth-primary/10 text-earth-green' : 
+                    booking.paymentStatus === 'partial' ? 'bg-blue-500/10 text-blue-400' : 
+                    'bg-orange-500/10 text-orange-400'
+                  )}>
+                    {booking.paymentStatus}
+                  </Badge>
+                </div>
 
-                    {booking.paymentStatus !== 'full' && (
-                      <Button 
-                        onClick={() => {
-                          setPaymentPortal({ open: true, type: `Payment for ${booking.serviceType}`, amount: booking.remainingAmount, targetId: booking.id });
-                          setPaymentStep('method');
-                        }}
-                        className="bg-accent text-white hover:opacity-90 px-5 h-9 font-black uppercase tracking-widest text-[8px] rounded-lg shadow-lg shadow-accent/10 transition-all"
-                      >
-                        Pay Now
-                      </Button>
-                    )}
-                    
-                    {/* Mobile Only Amount Display */}
-                    <div className="sm:hidden text-right">
-                       <p className="font-black text-lg text-earth-brown tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
-                       <p className={cn(
-                         "text-[7px] font-black uppercase tracking-widest",
-                         booking.paymentStatus === 'full' ? 'text-earth-green' : 
-                         booking.paymentStatus === 'partial' ? 'text-blue-400' : 'text-orange-400'
-                       )}>{booking.paymentStatus}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            }) : (
-              <div className="py-20 text-center bg-white rounded-[2.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.05)]">
-                <CheckCircle className="mx-auto mb-4 text-earth-green/20" size={40} />
-                <p className="text-[10px] font-black uppercase tracking-widest text-earth-brown italic">Zero Dues Recorded</p>
-                <p className="text-[8px] font-bold text-earth-mut uppercase tracking-widest mt-2">You are all caught up with your payments!</p>
+                {booking.paymentStatus !== 'full' && (
+                  <Button 
+                    onClick={() => {
+                      setPaymentPortal({ open: true, type: `Payment for ${booking.serviceType}`, amount: booking.remainingAmount, targetId: booking.id, bookingData: null });
+                      setPaymentStep('method');
+                    }}
+                    className="bg-accent text-white hover:opacity-90 px-5 h-9 font-black uppercase tracking-widest text-[8px] rounded-lg shadow-lg shadow-accent/10 transition-all"
+                  >
+                    Pay Now
+                  </Button>
+                )}
+                
+                {/* Mobile Only Amount Display */}
+                <div className="sm:hidden text-right">
+                   <p className="font-black text-lg text-earth-brown tabular-nums tracking-tighter">{formatCurrency(booking.remainingAmount)}</p>
+                   <p className={cn(
+                     "text-[7px] font-black uppercase tracking-widest",
+                     booking.paymentStatus === 'full' ? 'text-earth-green' : 
+                     booking.paymentStatus === 'partial' ? 'text-blue-400' : 'text-orange-400'
+                   )}>{booking.paymentStatus}</p>
+                </div>
               </div>
-            )}
+            </motion.div>
+          );
+        }) : (
+          <div className="py-20 text-center bg-white rounded-[2.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.05)]">
+            <CheckCircle className="mx-auto mb-4 text-earth-green/20" size={40} />
+            <p className="text-[10px] font-black uppercase tracking-widest text-earth-brown italic">Zero Dues Recorded</p>
+            <p className="text-[8px] font-bold text-earth-mut uppercase tracking-widest mt-2">You are all caught up with your payments!</p>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Transaction Detail Modal - Scaled Down */}
+      {/* Transaction Detail Modal */}
       <AnimatePresence>
         {selectedTx && (
           <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
@@ -297,7 +226,7 @@ export default function Payments() {
         )}
       </AnimatePresence>
 
-      {/* Detailed Action Modal */}
+      {/* Payment Portal Modal */}
       <AnimatePresence>
         {paymentPortal.open && (
           <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
@@ -308,40 +237,64 @@ export default function Payments() {
                  initial={{ y: 10, opacity: 0 }} 
                  animate={{ y: 0, opacity: 1 }} 
                  exit={{ y: 10, opacity: 0 }}
-                 className="relative text-left z-10 bg-earth-card border border-earth-dark/10 w-full max-w-[400px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl border-t-2 border-t-accent"
+                 className="relative text-left z-10 bg-earth-card border border-earth-dark/10 w-full max-w-[420px] rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl border-t-2 border-t-accent"
               >
               {paymentStep === 'method' && (
-                <div className="p-7 space-y-6">
+                <div className="p-7 space-y-5">
+                  {/* Header */}
                   <div className="flex justify-between items-start">
                     <div>
                        <h3 className="text-2xl font-black text-earth-brown italic leading-none">Checkout</h3>
-                       <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mt-2">{paymentPortal.type}</p>
+                       <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mt-2">Review your payment details</p>
                     </div>
                     <button onClick={() => setPaymentPortal({ ...paymentPortal, open: false })} className="text-earth-mut hover:text-earth-brown transition-colors"><X size={20} /></button>
                   </div>
 
-                  <div className="bg-earth-card border border-earth-dark/10 p-5 rounded-2xl text-center">
-                     <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-1.5">Amount Payable</p>
-                     <p className="text-3xl font-black text-earth-brown italic tracking-tighter">{formatCurrency(paymentPortal.amount)}</p>
+                  {/* Payment Details Card */}
+                  <div className="bg-earth-card/60 border border-earth-dark/10 rounded-2xl overflow-hidden">
+                    {/* Service Name */}
+                    <div className="px-5 pt-5 pb-3 border-b border-earth-dark/10">
+                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-1">Service</p>
+                      <p className="font-black text-sm text-earth-brown uppercase italic">{paymentPortal.type}</p>
+                    </div>
+
+                    {/* Payment Type Badge */}
+                    <div className="px-5 py-3 border-b border-earth-dark/10 flex items-center justify-between">
+                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest">Payment Type</p>
+                      <span className={cn(
+                        "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full",
+                        paymentPortal.targetId === 'NEW_BOOKING' 
+                          ? 'bg-earth-primary/15 text-earth-green'
+                          : 'bg-blue-500/10 text-blue-400'
+                      )}>
+                        {paymentPortal.targetId === 'NEW_BOOKING' ? 'Full Payment' : 'Partial / Due'}
+                      </span>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="px-5 py-5 text-center">
+                      <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest mb-2">Amount Payable</p>
+                      <p className="text-4xl font-black text-earth-brown italic tracking-tighter">{formatCurrency(paymentPortal.amount)}</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                     <button onClick={startPayment} className="w-full h-14 bg-earth-card border border-earth-dark/10 rounded-xl px-4 flex items-center justify-between transition-all group">
-                        <div className="flex items-center gap-3">
-                           <CreditCard size={18} className="text-accent" />
-                           <span className="font-black text-xs text-earth-brown uppercase italic">Credit Card</span>
-                        </div>
-                        <ArrowUpRight size={16} className="text-earth-mut" />
-                     </button>
-                     <button onClick={startPayment} className="w-full h-14 bg-earth-card border border-earth-dark/10 rounded-xl px-4 flex items-center justify-between transition-all group">
-                        <div className="flex items-center gap-3">
-                           <Building size={18} className="text-earth-green" />
-                           <span className="font-black text-xs text-earth-brown uppercase italic">UPI / QR</span>
-                        </div>
-                        <ArrowUpRight size={16} className="text-earth-mut" />
-                     </button>
+                  {/* Trust Section */}
+                  <div className="bg-earth-card/40 border border-earth-dark/10 rounded-xl px-4 py-3.5 flex items-start gap-3">
+                    <ShieldCheck size={16} className="text-earth-green/70 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black text-earth-brown uppercase tracking-wide">Secure Payment via Paystack</p>
+                      <p className="text-[8px] font-bold text-earth-mut uppercase tracking-widest mt-0.5">Supports Card / Bank Transfer / USSD</p>
+                    </div>
                   </div>
-                  <p className="text-[7px] text-center text-earth-mut font-bold uppercase tracking-widest">Encrypted Gateways Active</p>
+
+                  {/* Single Pay Now Button */}
+                  <button
+                    onClick={startPayment}
+                    className="w-full h-14 bg-accent text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-accent/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <CreditCard size={18} />
+                    Pay Now
+                  </button>
                 </div>
               )}
 
@@ -377,9 +330,6 @@ export default function Payments() {
           </div>
         )}
       </AnimatePresence>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-      `}} />
     </div>
   );
 }

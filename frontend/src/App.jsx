@@ -133,7 +133,7 @@ function Login() {
           <div className="mt-12 space-y-4">
                <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm">
                  <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-white font-black shrink-0">1</div>
-                 <p className="font-bold text-white">Verify your email address securely</p>
+                 <p className="font-bold text-white">Secure Phone-Based Authentication</p>
                </div>
              <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm">
                <div className="w-10 h-10 bg-earth-primary rounded-xl flex items-center justify-center text-white font-black shrink-0">2</div>

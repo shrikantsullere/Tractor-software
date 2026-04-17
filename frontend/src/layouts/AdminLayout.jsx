@@ -207,7 +207,7 @@ export default function AdminLayout() {
             <div className="flex items-center gap-3 cursor-pointer group">
               <div className="text-right hidden lg:block">
                 <p className="font-bold text-earth-brown leading-none group-hover:text-earth-primary transition-colors">{user?.name || 'Admin User'}</p>
-                <p className="text-[10px] text-earth-mut font-semibold mt-1 tracking-widest uppercase">{user?.email || 'Central Command'}</p>
+                <p className="text-[10px] text-earth-mut font-semibold mt-1 tracking-widest uppercase">{user?.phone || 'Admin Portal'}</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-earth-card-alt flex items-center justify-center text-earth-primary font-black border border-earth-dark/15 shadow-sm group-hover:border-earth-primary/50 group-hover:shadow transition-all shrink-0">
                 {(user?.name || 'A').charAt(0)}

@@ -12,7 +12,6 @@ export default function Profile() {
   
   const [operator, setOperator] = useState({
     name: "Loading...",
-    email: "loading...",
     phone: "",
     role: "operator",
     tractor: "Loading...",
@@ -22,7 +21,7 @@ export default function Profile() {
 
   
   // Form States
-  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
   const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,7 +36,6 @@ export default function Profile() {
         setOperator(res.data);
         setProfileForm({ 
           name: res.data.name, 
-          email: res.data.email, 
           phone: res.data.phone 
         });
       }
@@ -115,7 +113,6 @@ export default function Profile() {
             
             <h1 className="text-xl md:text-2xl font-black text-earth-brown z-10 tracking-tight leading-none mb-1">{operator.name}</h1>
             <p className="text-[10px] text-earth-brown font-black uppercase tracking-[0.2em] mb-1">{operator.phone}</p>
-            {operator.email && <p className="text-[10px] text-earth-sub font-bold uppercase tracking-widest">{operator.email}</p>}
             
             <div className="mt-6 w-full flex flex-col gap-3">
                <div className="bg-earth-card-alt/50 p-3.5 rounded-2xl flex items-center justify-center gap-2">
@@ -147,10 +144,6 @@ export default function Profile() {
                   <div className="space-y-2">
                     <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Phone Number (Login ID)</label>
                     <Input readOnly value={profileForm.phone || ''} className="bg-earth-dark/5 border-none h-12 rounded-xl text-sm font-bold px-4 cursor-not-allowed text-earth-mut" />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <label className="text-[9px] uppercase font-black tracking-widest text-earth-mut pl-1">Email Address</label>
-                    <Input value={profileForm.email} onChange={e => setProfileForm(prev => ({...prev, email: e.target.value}))} className="bg-earth-card border-none h-12 rounded-xl text-sm font-bold px-4 focus:ring-2 focus:ring-earth-primary/20" />
                   </div>
                </div>
                <Button onClick={handleUpdateProfile} disabled={isSubmitting || !profileForm.name} className="w-full sm:w-auto px-8 h-12 rounded-xl font-black uppercase tracking-widest text-[10px] bg-accent text-white hover:opacity-90 border-none shadow-[0_8px_20px_rgba(255,152,0,0.25)]">
