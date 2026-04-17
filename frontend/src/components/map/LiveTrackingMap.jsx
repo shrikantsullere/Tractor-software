@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -88,6 +88,19 @@ function MapInteractionWatcher({ onManualInteraction }) {
   });
   return null;
 }
+
+// Optimized Marker components to prevent re-renders on parent state changes
+const MemoizedOperatorMarker = memo(({ position, icon }) => (
+  <Marker position={[position.lat, position.lng]} icon={icon} />
+));
+
+const MemoizedFarmerMarker = memo(({ position, icon }) => (
+  <Marker position={[position.lat, position.lng]} icon={icon} />
+));
+
+const MemoizedPolyline = memo(({ positions, pathOptions }) => (
+  <Polyline positions={positions} pathOptions={pathOptions} />
+));
 
 function haversineKm(a, b) {
   if (!a || !b) return 0;
@@ -187,8 +200,30 @@ export default function LiveTrackingMap({
   destinationLabel = '',
 }) {
   const { user } = useAuth();
-  const [operatorLocation, setOperatorLocation] = useState(null);
-  const [farmerLocation, setFarmerLocation] = useState(null);
+  
+  // Load from cache initially
+  const [operatorLocation, setOperatorLocation] = useState(() => {
+    const cached = localStorage.getItem('operator_last_loc');
+    return cached ? JSON.parse(cached) : null;
+  });
+  const [farmerLocation, setFarmerLocation] = useState(() => {
+    const cached = localStorage.getItem('farmer_last_loc');
+    return cached ? JSON.parse(cached) : null;
+  });
+
+  // Persistence effects
+  useEffect(() => {
+    if (operatorLocation) {
+      localStorage.setItem('operator_last_loc', JSON.stringify(operatorLocation));
+    }
+  }, [operatorLocation]);
+
+  useEffect(() => {
+    if (farmerLocation) {
+      localStorage.setItem('farmer_last_loc', JSON.stringify(farmerLocation));
+    }
+  }, [farmerLocation]);
+
   const [deviceLocation, setDeviceLocation] = useState(null);
   const [route, setRoute] = useState([]);
   const [distanceKm, setDistanceKm] = useState('--');
@@ -618,23 +653,23 @@ export default function LiveTrackingMap({
         )}
 
         {operatorLocation && (
-          <Marker
-            position={[operatorLocation.lat, operatorLocation.lng]}
+          <MemoizedOperatorMarker
+            position={operatorLocation}
             icon={isNavigating ? getNavigationArrowIcon(headingDeg) : tractorIcon}
           />
         )}
 
         {farmerLocation && (
-          <Marker position={[farmerLocation.lat, farmerLocation.lng]} icon={farmerIcon} />
+          <MemoizedFarmerMarker position={farmerLocation} icon={farmerIcon} />
         )}
 
         {route.length > 1 && (
           <>
-            <Polyline 
+            <MemoizedPolyline 
               positions={route} 
               pathOptions={{ color: '#2563eb', weight: 8, opacity: 0.4 }} 
             />
-            <Polyline 
+            <MemoizedPolyline 
               positions={route} 
               pathOptions={{ color: '#3b82f6', weight: 4, opacity: 1, lineJoin: 'round' }} 
             />

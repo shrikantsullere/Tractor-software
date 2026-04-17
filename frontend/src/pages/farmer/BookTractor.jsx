@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tractor, MapPin, Navigation, Mail, Info, CheckCircle, Calculator, Map as MapIcon, Loader2, ArrowRight, X, Clock, LocateFixed } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils';
 import { useSettings } from '../../context/SettingsContext';
 import { useBookings } from '../../context/BookingContext';
 import { api } from '../../lib/api';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { formatCurrency } from '../../lib/format';
 import RequestLocationMap from '../../components/map/RequestLocationMap';
 import useScrollLock from '../../hooks/useScrollLock';
@@ -62,7 +63,7 @@ export default function BookTractor() {
           setPriceDetails(result.data);
         }
       } catch (error) {
-        console.error('Preview failed:', error);
+        setErrors((prev) => ({ ...prev, general: "Please check your internet connection and try again" }));
       } finally {
         setIsPreviewLoading(false);
       }
@@ -81,6 +82,7 @@ export default function BookTractor() {
     const newErrors = {};
     if (!landSize || parseFloat(landSize) <= 0) newErrors.landSize = "Size required";
     if (!selectedMapLocation) newErrors.location = "Pin required";
+    if (!totalCost || totalCost <= 0) newErrors.general = "Price calculation pending or failed. Please check your connection.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -149,12 +151,44 @@ export default function BookTractor() {
       });
 
     } catch (error) {
-      setErrors({ general: error.message || "Connection failed" });
+      setErrors({ general: "Please check your internet connection and try again" });
       setBookingStep(1);
     } finally {
       setIsBooking(false);
     }
   };
+
+  // Memoize the price details display to avoid recalculation on unrelated state changes
+  const MemoizedPriceDisplay = useMemo(() => (
+    <div className="space-y-3">
+      <div className="flex justify-between text-xs font-bold text-earth-sub">
+        <span>Base Price ({landSize || 0} ha)</span>
+        {isPreviewLoading ? <Skeleton className="h-4 w-16" /> : <span className="text-earth-brown">{formatCurrency(baseTotal)}</span>}
+      </div>
+      <div className="flex justify-between text-xs font-bold text-earth-sub">
+        <div className="flex flex-col">
+          <span>Distance Charge ({priceDetails.roadDistance || 0} km)</span>
+          {priceDetails.zoneName && (
+            <span className="text-[9px] text-earth-mut uppercase tracking-widest leading-none mt-1">Tier: {priceDetails.zoneName}</span>
+          )}
+        </div>
+        {isPreviewLoading ? (
+          <Skeleton className="h-4 w-16" />
+        ) : (
+          <span className="text-earth-brown">
+            {priceDetails.distanceCharge === 0 
+              ? "Included" 
+              : formatCurrency(distanceSurcharge)
+            }
+          </span>
+        )}
+      </div>
+      <div className="pt-3 border-t border-earth-dark/10 flex justify-between items-end">
+        <span className="text-xs font-black text-earth-brown uppercase underline decoration-earth-primary underline-offset-4 decoration-2">Total Amount</span>
+        {isPreviewLoading ? <Skeleton className="h-6 w-24" /> : <span className="text-2xl font-black text-earth-primary tracking-tighter">{formatCurrency(totalCost)}</span>}
+      </div>
+    </div>
+  ), [landSize, isPreviewLoading, baseTotal, priceDetails, distanceSurcharge, totalCost]);
 
 
 
@@ -414,44 +448,21 @@ export default function BookTractor() {
               <h3 className="font-black text-[10px] uppercase tracking-widest text-earth-brown">Auto Quotation</h3>
             </div>
             <CardContent className="p-5 space-y-6">
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold text-earth-sub">
-                  <span>Base Price ({landSize || 0} ha)</span>
-                  <span className="text-earth-brown">{formatCurrency(baseTotal)}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold text-earth-sub">
-                  <div className="flex flex-col">
-                    <span>Distance Charge ({priceDetails.roadDistance || 0} km)</span>
-                    {priceDetails.zoneName && (
-                      <span className="text-[9px] text-earth-mut uppercase tracking-widest leading-none mt-1">Tier: {priceDetails.zoneName}</span>
-                    )}
-                  </div>
-                  <span className="text-earth-brown">
-                    {priceDetails.distanceCharge === 0 
-                      ? "Included" 
-                      : formatCurrency(distanceSurcharge)
-                    }
-                  </span>
-                </div>
-                <div className="pt-3 border-t border-earth-dark/10 flex justify-between items-end">
-                  <span className="text-xs font-black text-earth-brown uppercase underline decoration-earth-primary underline-offset-4 decoration-2">Total Amount</span>
-                  <span className="text-2xl font-black text-earth-primary tracking-tighter">{formatCurrency(totalCost)}</span>
-                </div>
-              </div>
-                <p className="text-[9px] text-earth-mut font-bold uppercase text-right tracking-widest">Quote valid for 48 hours</p>
+              {MemoizedPriceDisplay}
+              <p className="text-[9px] text-earth-mut font-bold uppercase text-right tracking-widest">Quote valid for 48 hours</p>
 
               <div className="flex flex-col gap-3 pt-2">
                 <Button 
                   onClick={handleBookNow}
-                  disabled={isBooking}
+                  isLoading={isBooking}
+                  disabled={isPreviewLoading}
                   className={cn(
                     "w-full h-12 rounded-xl font-black uppercase tracking-wide shadow-lg flex items-center justify-center gap-2 transition-all",
                     Object.keys(errors).length > 0 ? "bg-red-500/20 text-red-500 border border-red-500/30" : "bg-accent hover:opacity-90 text-white shadow-accent/20"
                   )}
                 >
-                  {isBooking ? <Loader2 size={20} className="animate-spin" /> : Object.keys(errors).length > 0 ? "Check Fields" : "Continue"}
+                  {Object.keys(errors).length > 0 ? "Check Fields" : "Continue"}
                 </Button>
-
               </div>
             </CardContent>
           </Card>
@@ -526,10 +537,10 @@ export default function BookTractor() {
 
             <Button 
               onClick={handleBookNow}
-              disabled={isBooking}
+              isLoading={isBooking}
               className="w-full h-16 bg-earth-primary hover:bg-earth-primary-hover text-earth-brown rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-earth-primary/20 flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
-              {isBooking ? <Loader2 size={24} className="animate-spin" /> : "Confirm Booking"} <ArrowRight size={20} />
+              Confirm Booking <ArrowRight size={20} />
             </Button>
           </div>
           </div>

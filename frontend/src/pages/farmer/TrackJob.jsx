@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { WifiOff } from 'lucide-react';
 import LiveTrackingMap from '../../components/map/LiveTrackingMap';
 import { api } from '../../lib/api';
+import { cn } from '../../lib/utils';
 
 /**
  * Farmer Track Job Page.
@@ -11,6 +13,7 @@ export default function TrackJob() {
   const [activeBooking, setActiveBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     let intervalId;
@@ -27,17 +30,22 @@ export default function TrackJob() {
         
         const booking = res?.data?.bookings?.[0];
 
+        setIsOffline(false);
         if (booking) {
           setActiveBooking(booking);
           setError('');
-          // If we found a booking, we can stop polling or slow it down. 
-          // For now, let's keep it simple and just clear the error if we had one.
         } else {
           setActiveBooking(null);
-          setError('No active job found. Your tractor will appear here once an operator is assigned.');
+          setError('Waiting for an operator to start your job.');
         }
       } catch (err) {
-        if (isFirstLoad) setError('Failed to load tracking data.');
+        if (!navigator.onLine || err.message?.includes('fetch') || err.name === 'AbortError') {
+          setIsOffline(true);
+          setError('Connection Lost');
+        } else {
+          setIsOffline(false);
+          if (isFirstLoad) setError('Failed to load tracking data.');
+        }
         console.error(err);
       } finally {
         if (isFirstLoad) setLoading(false);
@@ -71,14 +79,29 @@ export default function TrackJob() {
   if (error || !activeBooking) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-        <div className="text-center space-y-4 max-w-sm px-6">
-          <div className="w-16 h-16 bg-earth-card rounded-2xl flex items-center justify-center mx-auto border border-earth-dark/10">
-            <span className="text-3xl">📍</span>
+        <div className="text-center space-y-4 max-w-sm px-6 animate-in fade-in zoom-in duration-300">
+          <div className={cn(
+            "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border",
+            isOffline ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-earth-card border-earth-dark/10 text-3xl"
+          )}>
+            {isOffline ? <WifiOff size={32} /> : <span>📍</span>}
           </div>
-          <p className="text-sm font-black text-earth-brown uppercase">{error || 'No Active Job'}</p>
-          <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest">
-            Once your booking is assigned to an operator, live tracking will be available here.
+          <p className="text-sm font-black text-earth-brown uppercase">
+            {isOffline ? "Sync Interrupted" : (error || "No Active Job")}
           </p>
+          <p className="text-[10px] text-earth-mut font-bold uppercase tracking-widest leading-relaxed">
+            {isOffline 
+              ? "Please check your internet connection. We'll automatically reconnect once signal is restored." 
+              : "Once your booking is assigned to an operator, live tracking will be available here."}
+          </p>
+          {isOffline && (
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-earth-card border border-earth-dark/10 shadow-sm animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                <span className="text-[8px] font-black uppercase tracking-widest text-earth-sub">Retrying Satellite Link...</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -12,28 +12,71 @@ export default function Jobs() {
   const [statsData, setStatsData] = useState({ hectares_done: 0, total_jobs: 0, engine_hours: 0, unit_health: 100 });
   const [loading, setLoading] = useState(true);
   const fetchData = async () => {
+    const hasInitialData = jobData.current_job !== null || jobData.queue.length > 0;
+    
     try {
-      setLoading(true);
+      if (!hasInitialData) setLoading(true);
       const [jobsRes, statsRes] = await Promise.all([
         api.operator.getJobs(),
         api.operator.getStats()
       ]);
-      if (jobsRes.success) setJobData(jobsRes.data);
-      if (statsRes.success) setStatsData(statsRes.data);
+      
+      if (jobsRes.success) {
+        setJobData(jobsRes.data);
+        localStorage.setItem('operatorJobs', JSON.stringify(jobsRes.data));
+      }
+      if (statsRes.success) {
+        setStatsData(statsRes.data);
+        localStorage.setItem('operatorStats', JSON.stringify(statsRes.data));
+      }
     } catch (err) {
-      console.error("Failed to fetch operator data:", err);
+      console.error("Failed to fetch operator data, trying cache:", err);
+      // Fallback to cache on error
+      const cachedJobs = localStorage.getItem('operatorJobs');
+      const cachedStats = localStorage.getItem('operatorStats');
+      if (cachedJobs) {
+        try { setJobData(JSON.parse(cachedJobs)); } catch (e) {}
+      }
+      if (cachedStats) {
+        try { setStatsData(JSON.parse(cachedStats)); } catch (e) {}
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial cache load for instant UI
+  useEffect(() => {
+    const cachedJobs = localStorage.getItem('operatorJobs');
+    const cachedStats = localStorage.getItem('operatorStats');
+    if (cachedJobs) {
+      try { setJobData(JSON.parse(cachedJobs)); } catch (e) {}
+    }
+    if (cachedStats) {
+      try { setStatsData(JSON.parse(cachedStats)); } catch (e) {}
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-    const intervalId = setInterval(fetchData, 15000);
-    const onFocus = () => fetchData();
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 15000);
+
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', onFocus);
     window.addEventListener('focus', onFocus);
+    
     return () => {
       clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onFocus);
       window.removeEventListener('focus', onFocus);
     };
   }, []);

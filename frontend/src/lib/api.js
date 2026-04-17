@@ -2,35 +2,114 @@
 const API_URL = 'http://localhost:5000/api'
 // const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
 
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Simple in-memory cache and request deduplication
+const apiCache = new Map();
+const pendingRequests = new Map();
+const CACHE_TTL = 30000; // 30 seconds
+
 /**
  * Standard fetch wrapper that automatically injects the Authorization header
- * if a token is present in localStorage.
+ * if a token is present in localStorage. Supports automatic retries, timeouts,
+ * caching (GET only), and request deduplication.
  */
 async function fetchAPI(endpoint, options = {}) {
   const token = localStorage.getItem('tractorlink_token');
+  const timeout = options.timeout ?? 10000; // 10s default timeout
+  const method = (options.method || 'GET').toUpperCase();
   
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
+  // Create a unique key for caching and deduplication
+  const cacheKey = `${method}:${endpoint}:${options.body || ''}`;
+
+  // 1. Caching (GET only)
+  if (method === 'GET') {
+    const cached = apiCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+      return cached.data;
+    }
+  }
+
+  // 2. Request Deduplication
+  // If an identical request is already in-flight, return its promise
+  if (pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey);
+  }
+
+  const performRequest = async () => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Default to 1 retry for critical writes (POST/PUT/DELETE) if not specified
+    const isWrite = ['POST', 'PUT', 'DELETE'].includes(method);
+    const retries = options.retries ?? (isWrite ? 1 : 0);
+    const retryDelay = options.retryDelay ?? 1500;
+    let lastError;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+
+      try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          headers,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Something went wrong');
+        }
+
+        // Cache the result if total success and GET
+        if (method === 'GET') {
+          apiCache.set(cacheKey, { data, timestamp: Date.now() });
+        }
+
+        return data;
+      } catch (error) {
+        clearTimeout(id);
+        lastError = error;
+        
+        const isTimeout = error.name === 'AbortError';
+        const isNetworkError = error.message?.includes('network') || error.message?.includes('fetch') || isTimeout;
+
+        if (attempt < retries && isNetworkError) {
+          console.warn(`[Retry ${attempt + 1}/${retries}] ${isTimeout ? 'Timeout' : 'Network error'} on ${endpoint}. Retrying...`);
+          await wait(retryDelay);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw lastError;
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  // Execute and manage the life-cycle of the pending request
+  const requestPromise = performRequest();
+  pendingRequests.set(cacheKey, requestPromise);
+
+  try {
+    const result = await requestPromise;
+    return result;
+  } finally {
+    // Always clear the pending request when done
+    pendingRequests.delete(cacheKey);
   }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
-  }
-
-  return data;
 }
+
+// Global cache clear utility (useful for logout)
+export const clearApiCache = () => apiCache.clear();
 
 // Auth API Calls
 export const api = {
@@ -85,12 +164,14 @@ export const api = {
       return await fetchAPI('/farmer/bookings', {
         method: 'POST',
         body: JSON.stringify(bookingData),
+        retries: 2
       });
     },
     checkout: async (bookingData) => {
       return await fetchAPI('/farmer/checkout', {
         method: 'POST',
         body: JSON.stringify(bookingData),
+        retries: 2
       });
     },
     listBookings: async (params = {}) => {
@@ -151,7 +232,8 @@ export const api = {
     scheduleBooking: async (bookingId, scheduledDate) => {
       return await fetchAPI(`/admin/schedule/${bookingId}`, {
         method: 'PUT',
-        body: JSON.stringify({ scheduledDate })
+        body: JSON.stringify({ scheduledDate }),
+        retries: 2
       });
     },
     getAvailableOperators: async () => {
@@ -160,7 +242,15 @@ export const api = {
     assignBooking: async (bookingId, operatorId) => {
       return await fetchAPI(`/admin/assign/${bookingId}`, {
         method: 'PUT',
-        body: JSON.stringify({ operatorId })
+        body: JSON.stringify({ operatorId }),
+        retries: 2
+      });
+    },
+    dispatchBooking: async (bookingId, operatorId) => {
+      return await fetchAPI(`/admin/dispatch/${bookingId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ operatorId }),
+        retries: 2
       });
     },
     getPayments: async (params = {}) => {
@@ -311,7 +401,8 @@ export const api = {
     updateStatus: async (id, status) => {
       return await fetchAPI(`/operator/job-status/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
+        retries: 2
       });
     },
     addFuelLog: async (fuelData) => {
@@ -358,7 +449,8 @@ export const api = {
     payBooking: async (paymentData) => {
       return await fetchAPI('/payments/pay-booking', {
         method: 'POST',
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify(paymentData),
+        retries: 2
       });
     },
     settleAll: async () => {

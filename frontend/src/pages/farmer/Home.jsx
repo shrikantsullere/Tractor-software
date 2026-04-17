@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, MapPin, History, Wallet, Zap, Calendar, Tractor, Clock, Loader2, Navigation } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { formatCurrency } from '../../lib/format';
 
 export default function Home() {
@@ -15,13 +16,17 @@ export default function Home() {
 
   useEffect(() => {
     const fetchDashboard = async () => {
+      const hasInitialData = dashboardData.name !== '';
+      
       try {
-        setIsLoading(true);
+        if (!hasInitialData) setIsLoading(true);
+        
         const [dashRes, activityRes, jobsRes] = await Promise.all([
           api.farmer.getDashboard(),
           api.farmer.getRecentActivity(),
           api.farmer.getUpcomingJobs(),
         ]);
+        
         if (dashRes?.success) setDashboardData(dashRes.data);
         if (activityRes?.success) setRecentActivity(activityRes.data);
         if (jobsRes?.success) setUpcomingJobs(jobsRes.data);
@@ -32,16 +37,16 @@ export default function Home() {
       }
     };
     fetchDashboard();
-  }, []);
+  }, []); // Only on mount, api.js handles caching/dedup internally now
 
   const activeJob = upcomingJobs.find(job => ['ASSIGNED', 'IN_PROGRESS'].includes(job.status));
   const filteredUpcomingJobs = upcomingJobs.filter(job => job.id !== activeJob?.id);
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: 'Revenue Invoiced', value: formatCurrency(dashboardData.total_paid), icon: Wallet, color: 'text-earth-green', bg: 'bg-earth-primary/5' },
     { label: 'Active Missions', value: dashboardData.active_jobs.toString(), icon: Zap, color: 'text-earth-primary', bg: 'bg-earth-primary/5' },
     { label: 'Total Operations', value: dashboardData.total_bookings.toString(), icon: History, color: 'text-blue-500', bg: 'bg-blue-500/5' },
-  ];
+  ], [dashboardData]);
 
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto pb-24 md:pb-6">
@@ -52,7 +57,11 @@ export default function Home() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-earth-primary text-xs md:text-sm font-bold mb-0.5 tracking-wider uppercase">Welcome back,</p>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown">{isLoading ? 'Loading...' : dashboardData.name}</h1>
+            {isLoading && !dashboardData.name ? (
+              <Skeleton className="h-8 w-48 mt-1" />
+            ) : (
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-earth-brown">{dashboardData.name}</h1>
+            )}
           </div>
         </div>
       </header>
@@ -67,7 +76,11 @@ export default function Home() {
               <CardContent className="p-4 flex items-center justify-between h-full">
                 <div>
                   <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest mb-1">{stats[0].label}</p>
-                  <h3 className="text-xl font-black text-earth-brown">{isLoading ? '-' : stats[0].value}</h3>
+                  {isLoading && !dashboardData.name ? (
+                    <Skeleton className="h-7 w-20" />
+                  ) : (
+                    <h3 className="text-xl font-black text-earth-brown">{stats[0].value}</h3>
+                  )}
                 </div>
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-earth-dark/15 shadow-inner", stats[0].bg, stats[0].color)}>
                   {(() => { const Icon = stats[0].icon; return <Icon size={20} />; })()}
@@ -81,7 +94,11 @@ export default function Home() {
               <CardContent className="p-4 flex items-center justify-between h-full">
                 <div>
                   <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest mb-1">{stats[2].label}</p>
-                  <h3 className="text-xl font-black text-earth-brown">{isLoading ? '-' : stats[2].value}</h3>
+                  {isLoading && !dashboardData.name ? (
+                    <Skeleton className="h-7 w-12" />
+                  ) : (
+                    <h3 className="text-xl font-black text-earth-brown">{stats[2].value}</h3>
+                  )}
                 </div>
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-earth-dark/15 shadow-inner", stats[2].bg, stats[2].color)}>
                   {(() => { const Icon = stats[2].icon; return <Icon size={20} />; })()}
@@ -95,9 +112,13 @@ export default function Home() {
               <CardContent className="p-4 flex items-center justify-between h-full">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest mb-1 text-nowrap">Primary Farm</p>
-                  <h3 className="text-sm font-black text-earth-brown truncate uppercase tracking-tight">
-                    {isLoading ? '...' : dashboardData.location || 'Main Site'}
-                  </h3>
+                  {isLoading && !dashboardData.name ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    <h3 className="text-sm font-black text-earth-brown truncate uppercase tracking-tight">
+                      {dashboardData.location || 'Main Site'}
+                    </h3>
+                  )}
                 </div>
                 <div className="w-10 h-10 bg-earth-primary/10 text-earth-primary rounded-xl flex items-center justify-center border border-earth-dark/15 shadow-inner shrink-0">
                   <MapPin size={20} />
@@ -198,10 +219,16 @@ export default function Home() {
             <div className="space-y-3 pt-2">
               <h3 className="font-bold text-earth-brown tracking-tight text-xs uppercase tracking-widest px-1 text-nowrap">Upcoming Schedule</h3>
               <div className="space-y-2.5">
-                {isLoading ? (
-                  <div className="bg-earth-card-alt/30 p-4 rounded-xl border border-earth-dark/10/50 text-center flex items-center justify-center h-[74px]">
-                    <Clock className="animate-spin text-earth-mut" size={16} />
-                  </div>
+                {isLoading && filteredUpcomingJobs.length === 0 ? (
+                  Array(2).fill(0).map((_, i) => (
+                    <div key={i} className="flex gap-4 items-center bg-white/50 p-4 rounded-[1.2rem] border border-earth-dark/5">
+                      <Skeleton className="w-12 h-12 rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-2 w-1/3" />
+                      </div>
+                    </div>
+                  ))
                 ) : filteredUpcomingJobs.length > 0 ? (
                   filteredUpcomingJobs.map((job, idx) => {
                     const jobDate = new Date(job.date);
@@ -264,10 +291,16 @@ export default function Home() {
               </div>
               
               <div className="space-y-3">
-                {isLoading ? (
-                  <Card className="bg-white shadow-sm border-none rounded-[1.2rem] h-[100px] flex items-center justify-center">
-                       <Clock className="animate-spin text-earth-mut" size={16} />
-                  </Card>
+                {isLoading && recentActivity.length === 0 ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <Card key={i} className="bg-white/50 border-none shadow-sm rounded-[1.2rem] h-20 flex items-center px-4 gap-4">
+                       <Skeleton className="w-1.5 h-full absolute left-0" />
+                       <div className="flex-1 space-y-2">
+                          <Skeleton className="h-2 w-1/4" />
+                          <Skeleton className="h-3 w-1/2" />
+                       </div>
+                    </Card>
+                  ))
                 ) : recentActivity.length > 0 ? (
                   recentActivity.slice(0, 3).map((activity, idx) => (
                     <Card key={idx} className="bg-white border-none shadow-[0_10px_30px_rgba(0,0,0,0.03)] hover:shadow-lg transition-all rounded-[1.2rem] relative overflow-hidden">

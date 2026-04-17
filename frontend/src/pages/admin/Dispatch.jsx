@@ -17,6 +17,8 @@ export default function Dispatch() {
   const [schedulingJob, setSchedulingJob] = useState(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+  const [dispatchError, setDispatchError] = useState(null);
 
   useEffect(() => {
     fetchActiveData();
@@ -60,48 +62,46 @@ export default function Dispatch() {
     }
   }, []);
 
-  const handleDispatch = (operatorArg = null) => {
+  const handleDispatch = async (operatorArg = null) => {
     const operatorToDispatch = operatorArg || selectedOperator;
     if (!selectedJob || !operatorToDispatch) return;
     if (selectedJob.status?.toUpperCase() === 'PENDING') {
-      alert("Please schedule this job first!");
+      setDispatchError("Please schedule this job first!");
       return;
     }
     
     setIsDispatching(true);
-    // Mimic satellite transmission time visually
-    setTimeout(async () => {
-      try {
-        await api.admin.dispatchBooking(selectedJob.id, operatorToDispatch.id);
-        
-        // Remove job locally to prevent jumping
-        setPendingJobs(prev => prev.filter(j => j.id !== selectedJob.id));
-        setOperators(prev =>
-          prev.map((op) =>
-            op.id === operatorToDispatch.id
-              ? { ...op, availability: 'busy', isDispatchReady: false }
-              : op
-          )
-        );
-        
-        setIsDispatching(false);
-        setShowSuccess(true);
-        setSelectedJob(null);
-        setSelectedOperator(null);
-        
-        // Auto-hide success
-        setTimeout(() => setShowSuccess(false), 4000);
-      } catch (error) {
-        console.error("Dispatch Failed:", error);
-        setIsDispatching(false);
-        alert(error.message || "Failed to dispatch operator!");
-      }
-    }, 1000);
+    setDispatchError(null);
+    try {
+      await api.admin.dispatchBooking(selectedJob.id, operatorToDispatch.id);
+      
+      // Remove job locally to prevent jumping
+      setPendingJobs(prev => prev.filter(j => j.id !== selectedJob.id));
+      setOperators(prev =>
+        prev.map((op) =>
+          op.id === operatorToDispatch.id
+            ? { ...op, availability: 'busy', isDispatchReady: false }
+            : op
+        )
+      );
+      
+      setShowSuccess(true);
+      setSelectedJob(null);
+      setSelectedOperator(null);
+      
+      // Auto-hide success
+      setTimeout(() => setShowSuccess(false), 4000);
+    } catch (error) {
+       setDispatchError("Please check your internet connection and try again.");
+    } finally {
+      setIsDispatching(false);
+    }
   };
 
   const handleScheduleSubmit = async () => {
     if (!schedulingJob || !scheduledDate) return;
     setIsScheduling(true);
+    setScheduleError(null);
     try {
       const res = await api.admin.scheduleBooking(schedulingJob.id, scheduledDate);
       if (res.success) {
@@ -113,8 +113,7 @@ export default function Dispatch() {
         setSelectedJob(res.data);
       }
     } catch (error) {
-      console.error("Scheduling failed:", error);
-      alert(error.message || "Failed to schedule job");
+       setScheduleError("Please check your internet connection and try again.");
     } finally {
       setIsScheduling(false);
     }
@@ -256,6 +255,11 @@ export default function Dispatch() {
             </div>
 
             <h4 className="text-[10px] font-black uppercase tracking-widest text-earth-mut mb-4 pl-1">Nearest Operators</h4>
+            {dispatchError && (
+              <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black uppercase tracking-widest animate-pulse mb-4">
+                {dispatchError}
+              </div>
+            )}
 
             <div className="space-y-3">
               {operators.map(op => {
@@ -294,6 +298,7 @@ export default function Dispatch() {
                     </div>
                     <Button 
                       size="sm" 
+                      isLoading={isOperatorSelected && isDispatching}
                       disabled={!canAssign || isDispatching}
                       onClick={(e) => { 
                         e.stopPropagation(); 
@@ -307,7 +312,7 @@ export default function Dispatch() {
                           : "bg-earth-card hover:bg-earth-card-alt text-earth-sub hover:text-accent"
                       )}
                     >
-                      {!op.isDispatchReady ? "Unavailable" : isOperatorSelected ? "Confirm" : "Assign"} <ArrowRight size={14} />
+                      {!op.isDispatchReady ? "Unavailable" : isOperatorSelected && isDispatching ? "" : isOperatorSelected ? "Confirm" : "Assign"} {!isDispatching && <ArrowRight size={14} />}
                     </Button>
                   </Card>
                 );
@@ -334,21 +339,7 @@ export default function Dispatch() {
         </CardContent>
       </Card>
 
-      {/* Dispatching Overlay */}
-      {isDispatching && (
-        <div className="fixed inset-0 bg-earth-main/60 backdrop-blur-md z-[100] flex items-center justify-center">
-           <div className="bg-earth-card border border-earth-dark/15 p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in duration-300">
-              <div className="relative">
-                <Loader2 size={60} className="text-earth-primary animate-spin" />
-                <Zap size={24} className="text-earth-brown absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-              </div>
-              <div className="text-center space-y-2">
-                <p className="text-lg font-black text-earth-brown uppercase tracking-widest">Transmitting Dispatch</p>
-                <p className="text-[10px] font-bold text-earth-mut uppercase tracking-[0.3em]">Encrypted Satellite Link...</p>
-              </div>
-           </div>
-        </div>
-      )}
+
 
       {/* Success Success Overlay */}
       {showSuccess && (
@@ -415,11 +406,15 @@ export default function Dispatch() {
 
                   <Button 
                     onClick={handleScheduleSubmit}
+                    isLoading={isScheduling}
                     disabled={!scheduledDate || isScheduling}
                     className="w-full h-14 bg-accent hover:scale-[1.02] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-accent/20 disabled:grayscale transition-all active:scale-95 border-none"
                   >
-                    {isScheduling ? "Processing..." : "Confirm Schedule"}
+                    Confirm Schedule
                   </Button>
+                  {scheduleError && (
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest text-center mt-2 animate-pulse">{scheduleError}</p>
+                  )}
                </div>
             </motion.div>
          </div>

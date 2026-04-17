@@ -28,8 +28,10 @@ export default function Tractors() {
   const [updatingId, setUpdatingId] = useState(null);
 
   const fetchData = async () => {
-    setIsLoading(true);
+    const hasInitialData = tractors.length > 0;
+    
     try {
+      if (!hasInitialData) setIsLoading(true);
       const [tractorRes, operatorRes] = await Promise.all([
         api.admin.getTractors(),
         api.admin.getOperators()

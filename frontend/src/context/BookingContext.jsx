@@ -44,9 +44,44 @@ export const BookingProvider = ({ children }) => {
           setPagination({ totalPages: 1, currentPage: 1 });
           setTotalCount(Array.isArray(result.data) ? result.data.length : 0);
         }
+        
+        // Save to cache for farmer
+        if (role === 'farmer') {
+          localStorage.setItem('farmerBookingHistory', JSON.stringify(result));
+        }
       }
     } catch (error) {
-      if (!error.message.includes('permission')) {
+      if (role === 'farmer') {
+        const cached = localStorage.getItem('farmerBookingHistory');
+        if (cached) {
+          try {
+            const result = JSON.parse(cached);
+            if (result.data && (result.data.bookings || result.data.data)) {
+              const bookingData = result.data.bookings || result.data.data;
+              const paginationData = result.data.pagination || {
+                totalPages: result.data.totalPages,
+                currentPage: result.data.currentPage,
+                totalCount: result.data.totalCount
+              };
+              setBookings(bookingData);
+              setPagination({
+                totalPages: paginationData.totalPages || 1,
+                currentPage: paginationData.currentPage || 1
+              });
+              setTotalCount(paginationData.totalCount || bookingData.length);
+            } else {
+              setBookings(Array.isArray(result.data) ? result.data : []);
+              setPagination({ totalPages: 1, currentPage: 1 });
+              setTotalCount(Array.isArray(result.data) ? result.data.length : 0);
+            }
+            return; // Exit successfully using cache
+          } catch (e) {
+            console.error('Failed to parse cached bookings');
+          }
+        }
+      }
+
+      if (!error.message || !error.message.includes('permission')) {
         console.error('Failed to fetch bookings:', error);
       }
     } finally {

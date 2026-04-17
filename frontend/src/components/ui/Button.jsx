@@ -1,7 +1,19 @@
 import { cn } from '../../lib/utils';
 import { forwardRef } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useUI } from '../../context/UIContext';
 
-const Button = forwardRef(({ className, variant = 'primary', size = 'md', children, ...props }, ref) => {
+const Button = forwardRef(({ className, variant = 'primary', size = 'md', children, isLoading = false, loadingText = "Processing...", ...props }, ref) => {
+  const { startLoading } = useUI();
+
+  const handleInteraction = (e) => {
+    // If the button is a submit or has an onClick, we want to pulse the loader
+    // to give that "immediate" systemic feel requested by the user.
+    if (!props.disabled && !isLoading) {
+      startLoading();
+    }
+    if (props.onClick) props.onClick(e);
+  };
   const variants = {
     primary: "bg-accent text-white font-black uppercase tracking-widest shadow-lg shadow-accent/20 hover:opacity-90",
     secondary: "bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-white font-black uppercase tracking-widest shadow-sm",
@@ -21,15 +33,25 @@ const Button = forwardRef(({ className, variant = 'primary', size = 'md', childr
   return (
     <button
       ref={ref}
+      disabled={isLoading || props.disabled}
       className={cn(
-        "inline-flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 hover:brightness-105 active:scale-95 active:brightness-90 active:duration-75 disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         className
       )}
-      {...props}
+      {...Object.keys(props).reduce((acc, key) => {
+        if (key !== 'onClick') acc[key] = props[key];
+        return acc;
+      }, {})}
+      onClick={handleInteraction}
     >
-      {children}
+      {isLoading ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {loadingText}
+        </>
+      ) : children}
     </button>
   );
 });

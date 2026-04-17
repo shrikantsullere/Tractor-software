@@ -1,11 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { Tractor, UserCircle, Shield, Briefcase, Lock, Smartphone, Mail, ArrowLeft } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { BookingProvider } from './context/BookingContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { UIProvider, useUI } from './context/UIContext';
 import { Button } from './components/ui/Button';
+import { TopLoader } from './components/ui/TopLoader';
+import ErrorBoundary from './components/ui/ErrorBoundary';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 import Register from './pages/Register';
 import LandingPage from './pages/LandingPage';
 
@@ -14,31 +18,31 @@ import AdminLayout from './layouts/AdminLayout';
 import OperatorLayout from './layouts/OperatorLayout';
 
 // Farmer Pages
-import FarmerHome from './pages/farmer/Home';
-import BookTractor from './pages/farmer/BookTractor';
-import TrackJob from './pages/farmer/TrackJob';
-import History from './pages/farmer/History';
-import Payments from './pages/farmer/Payments';
-import Profile from './pages/farmer/Profile';
+const FarmerHome = lazyWithRetry(() => import('./pages/farmer/Home'));
+const BookTractor = lazyWithRetry(() => import('./pages/farmer/BookTractor'));
+const TrackJob = lazyWithRetry(() => import('./pages/farmer/TrackJob'));
+const History = lazyWithRetry(() => import('./pages/farmer/History'));
+const Payments = lazyWithRetry(() => import('./pages/farmer/Payments'));
+const Profile = lazyWithRetry(() => import('./pages/farmer/Profile'));
 
 // Admin Pages
-import Dashboard from './pages/admin/Dashboard';
-import Assignments from './pages/admin/Assignment';
-import LiveTracking from './pages/admin/LiveTracking';
-import Bookings from './pages/admin/Bookings';
-import Farmers from './pages/admin/Farmers';
-import AdminPayments from './pages/admin/Payments';
-import Reports from './pages/admin/Reports';
-import Operators from './pages/admin/Operators';
-import Tractors from './pages/admin/Tractors';
-import Settings from './pages/admin/Settings';
+const Dashboard = lazyWithRetry(() => import('./pages/admin/Dashboard'));
+const Assignments = lazyWithRetry(() => import('./pages/admin/Assignment'));
+const LiveTracking = lazyWithRetry(() => import('./pages/admin/LiveTracking'));
+const Bookings = lazyWithRetry(() => import('./pages/admin/Bookings'));
+const Farmers = lazyWithRetry(() => import('./pages/admin/Farmers'));
+const AdminPayments = lazyWithRetry(() => import('./pages/admin/Payments'));
+const Reports = lazyWithRetry(() => import('./pages/admin/Reports'));
+const Operators = lazyWithRetry(() => import('./pages/admin/Operators'));
+const Tractors = lazyWithRetry(() => import('./pages/admin/Tractors'));
+const Settings = lazyWithRetry(() => import('./pages/admin/Settings'));
 
 // Operator Pages
-import Jobs from './pages/operator/Jobs';
-import Navigation from './pages/operator/Navigation';
-import Status from './pages/operator/Status';
-import Fuel from './pages/operator/Fuel';
-import OperatorProfile from './pages/operator/Profile';
+const Jobs = lazyWithRetry(() => import('./pages/operator/Jobs'));
+const Navigation = lazyWithRetry(() => import('./pages/operator/Navigation'));
+const Status = lazyWithRetry(() => import('./pages/operator/Status'));
+const Fuel = lazyWithRetry(() => import('./pages/operator/Fuel'));
+const OperatorProfile = lazyWithRetry(() => import('./pages/operator/Profile'));
 import { cn } from './lib/utils';
 
 // --- Auth Protection Components ---
@@ -270,17 +274,67 @@ function Login() {
   );
 }
 
+/**
+ * NavigationHandler - Listens for global clicks to provide INSTANT pre-navigation feedback.
+ * Stops the loader once the location actually changes.
+ */
+function NavigationHandler({ children }) {
+  const { startLoading, stopLoading } = useUI();
+  const location = useLocation();
+
+  // Stop loader when location changes (Sync with destination)
+  useEffect(() => {
+    stopLoading();
+  }, [location.pathname, stopLoading]);
+
+  // Global click interceptor for PRE-navigation feedback
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      // Find the closest anchor tag if any
+      const link = e.target.closest('a');
+      
+      // If it's an internal link, start progress immediately
+      if (link && 
+          link.href && 
+          link.href.startsWith(window.location.origin) && 
+          link.target !== '_blank' &&
+          !e.defaultPrevented &&
+          e.button === 0 // Left click only
+      ) {
+        startLoading();
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick, { capture: true });
+    return () => document.removeEventListener('click', handleGlobalClick, { capture: true });
+  }, [startLoading]);
+
+  return children;
+}
+
 // --- End of Components ---
 
 function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <BookingProvider>
-          <SettingsProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
+      <UIProvider>
+        <NotificationProvider>
+          <BookingProvider>
+            <SettingsProvider>
+              <BrowserRouter>
+                <NavigationHandler>
+                  <TopLoader />
+                  <ErrorBoundary>
+                <Suspense fallback={
+                  <div className="min-h-screen flex items-center justify-center bg-earth-main">
+                    <div className="flex flex-col items-center gap-4">
+                      <Tractor className="w-12 h-12 text-earth-primary animate-bounce" />
+                      <p className="text-xs font-black uppercase tracking-widest text-earth-mut animate-pulse">Initializing Interface...</p>
+                    </div>
+                  </div>
+                }>
+                  <Routes>
+                  <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
@@ -321,11 +375,15 @@ function App() {
                 
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </BrowserRouter>
-          </SettingsProvider>
-        </BookingProvider>
-      </NotificationProvider>
+                </Routes>
+                </Suspense>
+              </ErrorBoundary>
+                </NavigationHandler>
+              </BrowserRouter>
+            </SettingsProvider>
+          </BookingProvider>
+        </NotificationProvider>
+      </UIProvider>
     </AuthProvider>
   );
 }

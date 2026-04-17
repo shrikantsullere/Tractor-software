@@ -13,6 +13,9 @@ export default function Status() {
   const [currentStatusId, setCurrentStatusId] = useState('idle');
   const [activeDialog, setActiveDialog] = useState(null); // 'summary'
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [targetStatusId, setTargetStatusId] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
 
   // Lock background scroll when mission dialog is active
   useScrollLock(activeDialog);
@@ -52,6 +55,9 @@ export default function Status() {
 
   const handleNextStep = async (statusId) => {
     if (!activeJob) return;
+    setIsUpdating(true);
+    setTargetStatusId(statusId);
+    setUpdateError(null);
     try {
       // Actually trigger backend status transition
       const res = await api.operator.updateStatus(activeJob.id, statusId);
@@ -62,7 +68,10 @@ export default function Status() {
         }
       }
     } catch (error) {
-      alert(error.message || "Failed to update status");
+       setUpdateError("Please check your internet connection and try again.");
+    } finally {
+      setIsUpdating(false);
+      setTargetStatusId(null);
     }
   };
 
@@ -134,6 +143,11 @@ export default function Status() {
           <div className="px-1 flex justify-between items-center mb-1">
              <h3 className="font-black text-earth-mut uppercase tracking-widest text-[9px]">Operational Sequence</h3>
           </div>
+          {updateError && (
+             <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black uppercase tracking-widest animate-pulse mb-2">
+               {updateError}
+             </div>
+          )}
           
           <div className="grid grid-cols-1 gap-3 md:gap-3.5">            {statuses.map((status, idx) => {
               const isActive = currentStatusId === 'idle' ? idx === 0 : (statuses[currentIdx + 1]?.id === status.id);
@@ -145,40 +159,46 @@ export default function Status() {
               };
 
               return (
-                <button
+                <Button
                   key={status.id}
                   onClick={() => handleNextStep(status.id)}
-                  disabled={!isActive || isCurrent}
+                  disabled={(!isActive || isCurrent) && !(isUpdating && targetStatusId === status.id)}
+                  isLoading={isUpdating && targetStatusId === status.id}
+                  loadingText="Syncing..."
                   className={cn(
-                    "w-full flex items-center p-4 md:p-5 rounded-2xl transition-all text-left border relative overflow-hidden group",
+                    "w-full flex items-center p-4 md:p-5 rounded-2xl transition-all text-left border relative overflow-hidden group h-auto",
                     isActive 
-                      ? `${accentColorMap[status.color]} shadow-lg shadow-black/20 border-opacity-100 scale-[1.01] z-10`
+                      ? `${accentColorMap[status.color]} shadow-lg shadow-black/20 border-opacity-100 scale-[1.01] z-10 hover:opacity-100`
                       : isCurrent || isPast
-                        ? "border-earth-dark/10 bg-earth-card opacity-60 cursor-default" 
-                        : "border-earth-dark/30 bg-earth-main opacity-20 cursor-not-allowed"
+                        ? "border-earth-dark/10 bg-earth-card opacity-60 cursor-default hover:bg-earth-card" 
+                        : "border-earth-dark/30 bg-earth-main opacity-20 cursor-not-allowed hover:bg-earth-main"
                   )}
                 >
-                  {isActive && <div className="absolute inset-y-0 left-0 w-1 bg-accent"></div>}
-                  
-                  <div className={cn(
-                    "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mr-4 md:mr-6 shrink-0 transition-all border shadow-inner",
-                    isActive ? "bg-earth-card border-earth-dark/15 text-earth-brown" 
-                    : isCurrent || isPast ? "bg-earth-card-alt text-earth-mut border-earth-dark/15" 
-                    : "bg-earth-main text-earth-sub border-earth-dark/30"
-                  )}>
-                    <status.icon size={20} className={cn(isActive && "animate-pulse")} />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h4 className={cn("font-black text-sm md:text-base tracking-tight uppercase italic", isActive ? "text-earth-brown" : isCurrent || isPast ? "text-earth-mut" : "text-earth-sub")}>
-                      {status.label}
-                    </h4>
-                    {isActive && <p className="text-[7px] md:text-[8px] text-earth-primary font-black uppercase tracking-[0.2em] mt-0.5">Awaiting Activation &bull; Click to Execute</p>}
-                    {(isCurrent || isPast) && !isActive && <p className="text-[7px] md:text-[8px] text-earth-green font-black uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5"><ShieldCheck size={10}/> Telemetry Verified</p>}
-                  </div>
+                  <div className="w-full flex items-center">
+                    {isActive && <div className="absolute inset-y-0 left-0 w-1 bg-accent"></div>}
+                    
+                    {!(isUpdating && targetStatusId === status.id) && (
+                      <div className={cn(
+                        "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mr-4 md:mr-6 shrink-0 transition-all border shadow-inner",
+                        isActive ? "bg-earth-card border-earth-dark/15 text-earth-brown" 
+                        : isCurrent || isPast ? "bg-earth-card-alt text-earth-mut border-earth-dark/15" 
+                        : "bg-earth-main text-earth-sub border-earth-dark/30"
+                      )}>
+                        <status.icon size={20} className={cn(isActive && "animate-pulse")} />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1 text-left">
+                      <h4 className={cn("font-black text-sm md:text-base tracking-tight uppercase italic", isActive ? "text-earth-brown" : isCurrent || isPast ? "text-earth-mut" : "text-earth-sub")}>
+                        {status.label}
+                      </h4>
+                      {isActive && <p className="text-[7px] md:text-[8px] text-earth-primary font-black uppercase tracking-[0.2em] mt-0.5">Awaiting Activation &bull; Click to Execute</p>}
+                      {(isCurrent || isPast) && !isActive && <p className="text-[7px] md:text-[8px] text-earth-green font-black uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5"><ShieldCheck size={10}/> Telemetry Verified</p>}
+                    </div>
 
-                  {isActive && <ArrowRight size={16} className="text-earth-sub group-hover:text-earth-brown transition-all transform group-hover:translate-x-1" />}
-                </button>
+                    {isActive && !(isUpdating && targetStatusId === status.id) && <ArrowRight size={16} className="text-earth-sub group-hover:text-earth-brown transition-all transform group-hover:translate-x-1" />}
+                  </div>
+                </Button>
               );
             })}
           </div>

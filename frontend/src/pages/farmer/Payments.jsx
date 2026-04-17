@@ -19,7 +19,9 @@ export default function Payments() {
   
   const [selectedTx, setSelectedTx] = useState(null);
   const [paymentPortal, setPaymentPortal] = useState({ open: false, type: '', amount: 0, targetId: null, bookingData: null });
-  const [paymentStep, setPaymentStep] = useState('method'); // method | processing | success
+  const [paymentStep, setPaymentStep] = useState('method'); // method | success
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
 
   // Lock background scroll when any modal is open
   useScrollLock(selectedTx || paymentPortal.open);
@@ -30,8 +32,18 @@ export default function Payments() {
       const result = await api.payments.getPending();
       if (result.success) {
         setPendingData(result.data);
+        localStorage.setItem('farmerPaymentData', JSON.stringify(result.data));
       }
     } catch (error) {
+      const cached = localStorage.getItem('farmerPaymentData');
+      if (cached) {
+        try {
+          setPendingData(JSON.parse(cached));
+          return; // Exit successfully using cache
+        } catch (e) {
+          console.error('Failed to parse cached payment data');
+        }
+      }
       console.error('Failed to fetch pending bookings:', error);
     } finally {
       setIsLoading(false);
@@ -76,7 +88,8 @@ export default function Payments() {
 
   const startPayment = async () => {
     try {
-      setPaymentStep('processing');
+      setIsPaying(true);
+      setPaymentError(null);
       
       if (paymentPortal.targetId === 'NEW_BOOKING') {
         // THIS IS THE NEW ATOMIC CHECKOUT FLOW
@@ -95,8 +108,9 @@ export default function Payments() {
       
       setPaymentStep('success');
     } catch (error) {
-      alert(error.message || 'Payment failed');
-      setPaymentStep('method');
+       setPaymentError("Please check your internet connection and try again.");
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -249,6 +263,11 @@ export default function Payments() {
                     </div>
                     <button onClick={() => setPaymentPortal({ ...paymentPortal, open: false })} className="text-earth-mut hover:text-earth-brown transition-colors"><X size={20} /></button>
                   </div>
+                  {paymentError && (
+                    <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center animate-pulse">
+                      {paymentError}
+                    </div>
+                  )}
 
                   {/* Payment Details Card */}
                   <div className="bg-earth-card/60 border border-earth-dark/10 rounded-2xl overflow-hidden">
@@ -288,23 +307,15 @@ export default function Payments() {
                   </div>
 
                   {/* Single Pay Now Button */}
-                  <button
+                  <Button
                     onClick={startPayment}
+                    isLoading={isPaying}
+                    loadingText="Processing..."
                     className="w-full h-14 bg-accent text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-accent/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
-                    <CreditCard size={18} />
+                    {!isPaying && <CreditCard size={18} />}
                     Pay Now
-                  </button>
-                </div>
-              )}
-
-              {paymentStep === 'processing' && (
-                <div className="p-12 flex flex-col items-center justify-center text-center space-y-4">
-                  <Clock className="w-16 h-16 text-earth-primary animate-spin" strokeWidth={1.5} />
-                  <div>
-                    <h3 className="text-lg font-black text-earth-brown uppercase italic">Processing</h3>
-                    <p className="text-[10px] text-earth-mut font-bold mt-1">Verifying secure channel...</p>
-                  </div>
+                  </Button>
                 </div>
               )}
 

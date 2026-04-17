@@ -11,6 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { formatCurrency } from '../../lib/format';
@@ -85,8 +86,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      const hasInitialData = metrics.active_jobs !== 0 || assignmentQueue.length > 0;
+      
       try {
-        setIsLoading(true);
+        if (!hasInitialData) setIsLoading(true);
+        
         const [metricsRes, queueRes, fleetRes, jobsRes] = await Promise.all([
           api.admin.getDashboardMetrics(),
           api.admin.getAssignmentQueue(),
@@ -165,17 +169,26 @@ export default function Dashboard() {
     let isCancelled = false;
     
     const fetchAllRoutes = async () => {
-      for (const job of activeJobs) {
+      // Find jobs that need a route update (have operator location but no route yet)
+      const jobsToFetch = activeJobs.filter(job => {
+        const hasOpLoc = !!fleetLocations[job.operatorId];
+        const hasDest = Number.isFinite(job.farmerLatitude);
+        const alreadyHasRoute = !!jobRoutes[job.id];
+        return hasOpLoc && hasDest && !alreadyHasRoute;
+      });
+
+      if (jobsToFetch.length === 0) return;
+
+      for (const job of jobsToFetch) {
         if (isCancelled) break;
-        if (jobRoutes[job.id]) continue; 
         
         const opLoc = fleetLocations[job.operatorId];
-        if (opLoc && Number.isFinite(job.farmerLatitude)) {
-          // Delay to respect OSRM public API rate limits
-          await new Promise(r => setTimeout(r, 500));
-          if (isCancelled) break;
-          
-          const route = await getRoute(opLoc, { lat: job.farmerLatitude, lng: job.farmerLongitude });
+        // Delay to respect OSRM public API rate limits (1 per second recommended for free tier)
+        await new Promise(r => setTimeout(r, 1000));
+        if (isCancelled) break;
+        
+        const route = await getRoute(opLoc, { lat: job.farmerLatitude, lng: job.farmerLongitude });
+        if (route) {
           setJobRoutes(prev => ({ ...prev, [job.id]: route }));
         }
       }
@@ -183,7 +196,7 @@ export default function Dashboard() {
 
     fetchAllRoutes();
     return () => { isCancelled = true; };
-  }, [activeJobs, fleetLocations]); // Removed jobRoutes from dependencies to prevent excessive re-runs
+  }, [activeJobs, fleetLocations, jobRoutes]); // Added jobRoutes back but used jobsToFetch filter to prevent loop cycles
   
   const stats = [
     { title: 'Active Jobs', value: metrics.active_jobs, icon: Activity, trend: '+2', up: true },
@@ -233,7 +246,11 @@ export default function Dashboard() {
               <div className="flex justify-between items-start mb-4 md:mb-6">
                 <div className="space-y-0.5 md:space-y-1">
                   <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-earth-mut">{stat.title}</p>
-                  <h3 className="text-xl md:text-3xl font-black tracking-tighter text-earth-brown tabular-nums leading-none">{stat.value}</h3>
+                  {isLoading && metrics.active_jobs === 0 ? (
+                    <Skeleton className="h-8 w-20 mt-1" />
+                  ) : (
+                    <h3 className="text-xl md:text-3xl font-black tracking-tighter text-earth-brown tabular-nums leading-none">{stat.value}</h3>
+                  )}
                 </div>
                 <div className={cn(
                   "w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shadow-inner shrink-0",
@@ -290,13 +307,16 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-earth-dark/5">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={5} className="py-20 text-center">
-                          <Clock className="animate-spin mx-auto text-earth-primary mb-4" size={24} />
-                          <p className="text-[10px] font-black uppercase text-earth-mut">Syncing Assignment Queue...</p>
-                        </td>
-                      </tr>
+                    {isLoading && assignmentQueue.length === 0 ? (
+                      Array(3).fill(0).map((_, i) => (
+                        <tr key={i}>
+                           <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+                           <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                           <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
+                           <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                           <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-24 inline-block" /></td>
+                        </tr>
+                      ))
                     ) : assignmentQueue.length > 0 ? assignmentQueue.map((booking) => (
                       <tr key={booking.id} className="group hover:bg-earth-card transition-colors">
                         <td className="px-6 py-4">

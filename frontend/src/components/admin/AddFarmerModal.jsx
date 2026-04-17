@@ -37,7 +37,7 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
         }, 2000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to register farmer');
+      setError("Network issue. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -133,13 +133,11 @@ export default function AddFarmerModal({ isOpen, onClose, onRefresh }) {
               <div className="pt-3 md:pt-4">
                 <Button 
                   disabled={isSubmitting}
+                  isLoading={isSubmitting}
+                  loadingText="Syncing Records..."
                   className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-xs shadow-[0_12px_24px_-8px_rgba(255,152,0,0.4)] border-none transition-all active:scale-[0.98]"
                 >
-                  {isSubmitting ? (
-                    <><Loader2 className="animate-spin mr-2" size={18} /> Syncing Records...</>
-                  ) : (
-                    "Authorize & Enroll Farmer"
-                  )}
+                  {!isSubmitting && "Authorize & Enroll Farmer"}
                 </Button>
               </div>
             </form>

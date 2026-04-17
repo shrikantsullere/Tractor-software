@@ -59,7 +59,7 @@ export default function Operators() {
         setFormData({ name: '', phone: '', password: '' });
       }
     } catch (error) {
-      setFormError(error.message || "Failed to create operator");
+      setFormError("Network issue. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -293,9 +293,11 @@ export default function Operators() {
                    </Button>
                    <Button 
                      disabled={isSubmitting}
+                     isLoading={isSubmitting}
+                     loadingText="Finalizing"
                      className="flex-1 h-12 rounded-2xl bg-accent hover:opacity-90 text-white font-black uppercase tracking-widest text-[10px] border-none shadow-[0_12px_24px_-8px_rgba(255,152,0,0.4)]"
                    >
-                     {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : "Finalize Recruit"}
+                     {!isSubmitting && "Finalize Recruit"}
                    </Button>
                  </div>
               </form>

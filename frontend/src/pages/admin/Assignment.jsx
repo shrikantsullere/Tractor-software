@@ -17,6 +17,8 @@ export default function Assignment() {
   const [schedulingJob, setSchedulingJob] = useState(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+  const [assignmentError, setAssignmentError] = useState(null);
 
   useEffect(() => {
     fetchActiveData();
@@ -60,48 +62,46 @@ export default function Assignment() {
     }
   }, []);
 
-  const handleAssignment = (operatorArg = null) => {
+  const handleAssignment = async (operatorArg = null) => {
     const operatorToAssign = operatorArg || selectedOperator;
     if (!selectedJob || !operatorToAssign) return;
     if (selectedJob.status?.toUpperCase() === 'PENDING') {
-      alert("Please schedule this job first!");
+      setAssignmentError("Please schedule this job first!");
       return;
     }
     
     setIsAssigning(true);
-    // Mimic satellite transmission time visually
-    setTimeout(async () => {
-      try {
-        await api.admin.assignBooking(selectedJob.id, operatorToAssign.id);
-        
-        // Remove job locally to prevent jumping
-        setPendingJobs(prev => prev.filter(j => j.id !== selectedJob.id));
-        setOperators(prev =>
-          prev.map((op) =>
-            op.id === operatorToAssign.id
-              ? { ...op, availability: 'busy', isAssignReady: false }
-              : op
-          )
-        );
-        
-        setIsAssigning(false);
-        setShowSuccess(true);
-        setSelectedJob(null);
-        setSelectedOperator(null);
-        
-        // Auto-hide success
-        setTimeout(() => setShowSuccess(false), 4000);
-      } catch (error) {
-        console.error("Assignment Failed:", error);
-        setIsAssigning(false);
-        alert(error.message || "Failed to assign operator!");
-      }
-    }, 1000);
+    setAssignmentError(null);
+    try {
+      await api.admin.assignBooking(selectedJob.id, operatorToAssign.id);
+      
+      // Remove job locally to prevent jumping
+      setPendingJobs(prev => prev.filter(j => j.id !== selectedJob.id));
+      setOperators(prev =>
+        prev.map((op) =>
+          op.id === operatorToAssign.id
+            ? { ...op, availability: 'busy', isAssignReady: false }
+            : op
+        )
+      );
+      
+      setShowSuccess(true);
+      setSelectedJob(null);
+      setSelectedOperator(null);
+      
+      // Auto-hide success
+      setTimeout(() => setShowSuccess(false), 4000);
+    } catch (error) {
+       setAssignmentError("Please check your internet connection and try again.");
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   const handleScheduleSubmit = async () => {
     if (!schedulingJob || !scheduledDate) return;
     setIsScheduling(true);
+    setScheduleError(null);
     try {
       // Ensure the date is in valid ISO format for the backend (it already is from the input)
       const res = await api.admin.scheduleBooking(schedulingJob.id, scheduledDate);
@@ -114,8 +114,7 @@ export default function Assignment() {
         setSelectedJob(res.data);
       }
     } catch (error) {
-      console.error("Scheduling failed:", error);
-      alert(error.message || "Failed to schedule job");
+       setScheduleError("Please check your internet connection and try again.");
     } finally {
       setIsScheduling(false);
     }
@@ -257,6 +256,11 @@ export default function Assignment() {
             </div>
 
             <h4 className="text-[10px] font-black uppercase tracking-widest text-earth-mut mb-4 pl-1">Nearest Operators</h4>
+            {assignmentError && (
+              <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black uppercase tracking-widest animate-pulse mb-4">
+                {assignmentError}
+              </div>
+            )}
 
             <div className="space-y-3">
               {operators.map(op => {
@@ -295,6 +299,7 @@ export default function Assignment() {
                     </div>
                     <Button 
                       size="sm" 
+                      isLoading={isOperatorSelected && isAssigning}
                       disabled={!canAssign || isAssigning}
                       onClick={(e) => { 
                         e.stopPropagation(); 
@@ -308,7 +313,7 @@ export default function Assignment() {
                           : "bg-earth-card hover:bg-earth-card-alt text-earth-sub hover:text-accent"
                       )}
                     >
-                      {!op.isAssignReady ? "Unavailable" : isOperatorSelected ? "Confirm" : "Assign"} <ArrowRight size={14} />
+                      {!op.isAssignReady ? "Unavailable" : isOperatorSelected && isAssigning ? "" : isOperatorSelected ? "Confirm" : "Assign"} {!isAssigning && <ArrowRight size={14} />}
                     </Button>
                   </Card>
                 );
@@ -335,21 +340,7 @@ export default function Assignment() {
         </CardContent>
       </Card>
 
-      {/* Assigning Overlay */}
-      {isAssigning && (
-        <div className="fixed inset-0 bg-earth-main/60 backdrop-blur-md z-[100] flex items-center justify-center">
-           <div className="bg-earth-card border border-earth-dark/15 p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in duration-300">
-              <div className="relative">
-                <Loader2 size={60} className="text-earth-primary animate-spin" />
-                <Zap size={24} className="text-earth-brown absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-              </div>
-              <div className="text-center space-y-2">
-                <p className="text-lg font-black text-earth-brown uppercase tracking-widest">Syncing Assignment</p>
-                <p className="text-[10px] font-bold text-earth-mut uppercase tracking-[0.3em]">Encrypted Satellite Link...</p>
-              </div>
-           </div>
-        </div>
-      )}
+
 
       {/* Success Success Overlay */}
       {showSuccess && (
@@ -416,11 +407,15 @@ export default function Assignment() {
 
                   <Button 
                     onClick={handleScheduleSubmit}
+                    isLoading={isScheduling}
                     disabled={!scheduledDate || isScheduling}
                     className="w-full h-14 bg-accent hover:scale-[1.02] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-accent/20 disabled:grayscale transition-all active:scale-95 border-none"
                   >
-                    {isScheduling ? "Processing..." : "Confirm Schedule"}
+                    Confirm Schedule
                   </Button>
+                  {scheduleError && (
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest text-center mt-2 animate-pulse">{scheduleError}</p>
+                  )}
                </div>
             </motion.div>
          </div>
