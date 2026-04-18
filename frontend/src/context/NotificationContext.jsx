@@ -5,7 +5,10 @@ import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
+const SOCKET_URL = 'http://localhost:5000'
+
+// const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 export const NotificationProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();

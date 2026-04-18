@@ -35,6 +35,7 @@ const AdminPayments = lazyWithRetry(() => import('./pages/admin/Payments'));
 const Reports = lazyWithRetry(() => import('./pages/admin/Reports'));
 const Operators = lazyWithRetry(() => import('./pages/admin/Operators'));
 const Tractors = lazyWithRetry(() => import('./pages/admin/Tractors'));
+const FuelLogs = lazyWithRetry(() => import('./pages/admin/FuelLogs'));
 const Settings = lazyWithRetry(() => import('./pages/admin/Settings'));
 
 // Operator Pages
@@ -357,6 +358,7 @@ function App() {
                   <Route path="farmers" element={<Farmers />} />
                   <Route path="operators" element={<Operators />} />
                   <Route path="fleet" element={<Tractors />} />
+                  <Route path="fuel-logs" element={<FuelLogs />} />
                   <Route path="payments" element={<AdminPayments />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings" element={<Settings />}>

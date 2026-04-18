@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, LineChart, PieChart, Download, Loader2, FileJson, FileText, ChevronDown } from 'lucide-react';
+import { BarChart3, LineChart, PieChart, Download, Loader2, FileJson, FileText, ChevronDown, Droplet } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { api } from '../../lib/api';
@@ -72,6 +72,7 @@ export default function Reports() {
   const [operatorPerformance, setOperatorPerformance] = useState([]);
   const [jobStatusDist, setJobStatusDist] = useState([]);
   const [tractorProfitability, setTractorProfitability] = useState([]);
+  const [fuelAnalytics, setFuelAnalytics] = useState(null);
   
   // Tooltip state for revenue chart
   const [revenueHover, setRevenueHover] = useState(null); // { index, x, y, value, label }
@@ -83,14 +84,15 @@ export default function Reports() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [rev, serv, fleet, bookAn, opPerf, statusDist, profit] = await Promise.all([
+      const [rev, serv, fleet, bookAn, opPerf, statusDist, profit, fuel] = await Promise.all([
         api.admin.reports.getRevenue(range),
         api.admin.reports.getServiceUsage(range),
         api.admin.reports.getFleet(),
         api.admin.reports.getBookingsAnalytics(range),
         api.admin.reports.getOperatorPerformance(range),
         api.admin.reports.getJobStatusDistribution(range),
-        api.admin.reports.getTractorProfitability(range)
+        api.admin.reports.getTractorProfitability(range),
+        api.admin.getFuelAnalytics({ range })
       ]);
 
       if (rev.success) setRevenueData(rev.data);
@@ -100,6 +102,7 @@ export default function Reports() {
       if (opPerf.success) setOperatorPerformance(opPerf.data);
       if (statusDist.success) setJobStatusDist(statusDist.data);
       if (profit.success) setTractorProfitability(profit.data);
+      if (fuel.success) setFuelAnalytics(fuel.data);
     } catch (error) {
       console.error("Failed to fetch report data:", error);
     } finally {
@@ -532,6 +535,53 @@ export default function Reports() {
                 })
               )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* FUEL ANALYTICS */}
+      <Card className="shadow-sm border-earth-dark/15/50 bg-earth-card-alt rounded-[1.5rem] mt-6">
+        <CardHeader className="pb-4 border-b border-earth-dark/15/50 bg-earth-card/50 pt-6 px-6">
+          <CardTitle className="text-[11px] font-black text-earth-brown uppercase tracking-widest">Fuel Analytics</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+             {loading ? (
+                <div className="col-span-full py-20 flex items-center justify-center"><Loader2 className="animate-spin text-earth-primary" /></div>
+             ) : !fuelAnalytics || !fuelAnalytics.tractorWise || fuelAnalytics.tractorWise.length === 0 ? (
+                <div className="col-span-full py-20 flex items-center justify-center text-[10px] font-black text-earth-mut uppercase tracking-widest">No fuel data available</div>
+             ) : (
+                fuelAnalytics.tractorWise.map((tw, i) => {
+                  const maxFuel = Math.max(...fuelAnalytics.tractorWise.map(t => t.totalFuel), 1);
+                  const fuelPercentage = (tw.totalFuel / maxFuel) * 100;
+                  return (
+                    <div key={i} className="p-5 bg-white rounded-2xl border border-earth-dark/5 shadow-sm hover:shadow-md transition-all group">
+                       <div className="flex justify-between items-start mb-4">
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-black uppercase text-earth-mut tracking-widest">Tractor</p>
+                             <h4 className="text-sm font-black text-earth-brown tracking-tight">{tw.tractorName}</h4>
+                          </div>
+                          <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                             <Droplet size={14} />
+                          </div>
+                       </div>
+                       <div className="space-y-3">
+                          <div className="flex justify-between text-[10px] font-black uppercase">
+                             <span className="text-earth-mut">Fuel Used</span>
+                             <span className="text-earth-brown">{tw.totalFuel.toFixed(1)} L</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] font-black uppercase">
+                             <span className="text-earth-mut">Cost</span>
+                             <span className="text-earth-primary">₦ {tw.totalCost.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-earth-card rounded-full overflow-hidden mt-1">
+                             <div className="h-full bg-orange-400 rounded-full transition-all duration-1000" style={{ width: `${fuelPercentage}%` }}></div>
+                          </div>
+                       </div>
+                    </div>
+                  );
+                })
+             )}
+           </div>
         </CardContent>
       </Card>
     </div>

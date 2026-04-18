@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import useScrollLock from '../../hooks/useScrollLock';
+import AddTractorModal from '../../components/admin/AddTractorModal';
 
 export default function Tractors() {
   const [tractors, setTractors] = useState([]);
@@ -344,105 +345,16 @@ export default function Tractors() {
       </Card>
 
       {/* Add Tractor Modal */}
-      {showAddModal && createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-y-auto scrollbar-hide">
-           <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
-              <div 
-                className="fixed inset-0 bg-earth-dark/40 backdrop-blur-xl animate-in fade-in duration-300"
-                onClick={closeModal}
-              />
-              <Card className="text-left relative z-10 w-full max-w-md bg-earth-card border-earth-dark/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rounded-2xl md:rounded-[2.5rem] overflow-hidden border-t-8 border-t-accent animate-in zoom-in-95 duration-300">
-                 <CardHeader className="p-8 pb-4 border-b border-earth-dark/5">
-                    <div className="w-16 h-16 rounded-3xl bg-accent/10 flex items-center justify-center text-accent mb-6 shadow-inner mx-auto">
-                       {isEditing ? <Wrench size={32} className="stroke-[2.5]" /> : <Truck size={32} className="stroke-[2.5]" />}
-                    </div>
-                    <CardTitle className="text-2xl font-black text-earth-brown uppercase text-center font-outfit italic tracking-tight">
-                       {isEditing ? 'Patch Asset Profile' : 'Enroll Machinery'}
-                    </CardTitle>
-                    <CardDescription className="text-center text-[10px] font-black uppercase text-earth-mut tracking-widest mt-2">
-                       {isEditing ? `Registry ID: #TR-${editingId}` : 'New Fleet Asset Registration'}
-                    </CardDescription>
-                 </CardHeader>
-                 <CardContent className="p-8 pt-6">
-                    <form onSubmit={handleCreateTractor} className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Asset Name</label>
-                              <Input 
-                                required
-                                value={newTractor.name}
-                                onChange={(e) => setNewTractor(prev => ({ ...prev, name: e.target.value }))}
-                                placeholder="Asset ID" 
-                                className="bg-earth-dark/5 border-earth-dark/10 rounded-2xl h-12 font-black uppercase text-sm focus:ring-2 focus:ring-accent/30"
-                              />
-                           </div>
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1">Model</label>
-                              <Input 
-                                value={newTractor.model}
-                                onChange={(e) => setNewTractor(prev => ({ ...prev, model: e.target.value }))}
-                                placeholder="Make/Model" 
-                                className="bg-earth-dark/5 border-earth-dark/10 rounded-2xl h-12 font-bold text-sm focus:ring-2 focus:ring-accent/30"
-                              />
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1 flex items-center gap-1.5"><Clock size={10} /> Engine Hrs</label>
-                              <Input 
-                                type="number"
-                                step="0.1"
-                                value={newTractor.engineHours}
-                                onChange={(e) => setNewTractor(prev => ({ ...prev, engineHours: e.target.value }))}
-                                className="bg-earth-dark/5 border-earth-dark/10 rounded-2xl h-12 font-black text-sm focus:ring-2 focus:ring-accent/30"
-                              />
-                           </div>
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1 flex items-center gap-1.5"><Settings2 size={10} /> Svc Threshold</label>
-                              <Input 
-                                type="number"
-                                value={newTractor.nextServiceDueHours}
-                                onChange={(e) => setNewTractor(prev => ({ ...prev, nextServiceDueHours: e.target.value }))}
-                                className="bg-earth-dark/5 border-earth-dark/10 rounded-2xl h-12 font-black text-sm focus:ring-2 focus:ring-accent/30"
-                              />
-                           </div>
-                        </div>
-
-                        <div className="space-y-2">
-                           <label className="text-[10px] font-black text-earth-mut uppercase tracking-widest ml-1 flex items-center gap-1.5"><Calendar size={10} /> Last Service Date</label>
-                           <Input 
-                             type="date"
-                             value={newTractor.lastServiceDate}
-                             onChange={(e) => setNewTractor(prev => ({ ...prev, lastServiceDate: e.target.value }))}
-                             className="bg-earth-dark/5 border-earth-dark/10 rounded-2xl h-12 font-bold text-sm focus:ring-2 focus:ring-accent/30"
-                           />
-                        </div>
-                       
-                        <div className="flex gap-4 pt-4">
-                           <Button 
-                             type="button"
-                             variant="outline"
-                             onClick={closeModal}
-                             className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] border-earth-dark/10 hover:bg-earth-card-alt text-earth-mut"
-                           >
-                             Cancel
-                           </Button>
-                           <Button 
-                             type="submit"
-                             disabled={isSubmitting}
-                             className="flex-1 h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/20 border-none"
-                           >
-                             {isSubmitting ? <Loader2 className="animate-spin" /> : (isEditing ? "Commit Changes" : "Deploy Asset")}
-                           </Button>
-                        </div>
-                    </form>
-                 </CardContent>
-              </Card>
-           </div>
-        </div>,
-        document.body
-      )}
+      <AddTractorModal
+        isOpen={showAddModal}
+        onClose={closeModal}
+        isEditing={isEditing}
+        editingId={editingId}
+        formData={newTractor}
+        setFormData={setNewTractor}
+        isSubmitting={isSubmitting}
+        onSubmit={handleCreateTractor}
+      />
 
     </div>
   );

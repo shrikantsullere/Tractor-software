@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Compass, Radio, Calendar, Users, Briefcase, ListCollapse, TrendingUp, SettingsIcon, LogOut, ChevronRight, Bell, Tractor, CheckCircle2, AlertCircle, MessageSquare, Truck, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Compass, Radio, Calendar, Users, Briefcase, ListCollapse, TrendingUp, SettingsIcon, LogOut, ChevronRight, Bell, Tractor, CheckCircle2, AlertCircle, MessageSquare, Truck, Droplet, Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import NotificationDropdown from '../components/NotificationDropdown';
@@ -72,6 +72,7 @@ export default function AdminLayout() {
     { icon: Users, label: 'Farmers', path: '/admin/farmers' },
     { icon: Briefcase, label: 'Operators', path: '/admin/operators' },
     { icon: Truck, label: 'Fleet (Tractors)', path: '/admin/fleet' },
+    { icon: Droplet, label: 'Fuel Logs', path: '/admin/fuel-logs' },
     { icon: ListCollapse, label: 'Payments', path: '/admin/payments' },
     { icon: TrendingUp, label: 'Reports', path: '/admin/reports' },
   ];

@@ -4,6 +4,7 @@ import * as adminController from '../controllers/admin/admin.controller.js';
 import * as dashboardController from '../controllers/admin/dashboard.controller.js';
 import * as reportController from '../controllers/admin/report.controller.js';
 import * as settingsController from '../controllers/admin/settings.controller.js';
+import * as fuelController from '../controllers/admin/fuel.controller.js';
 import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -45,6 +46,12 @@ router.delete('/operators/:id', adminController.deleteOperator);
 router.get('/tractors', adminController.getTractors);
 router.post('/tractors', adminController.createTractor);
 router.put('/tractors/:id', adminController.updateTractor);
+
+// Fuel Logs Management
+router.get('/fuel-logs', fuelController.getFuelLogs);
+router.get('/fuel-logs/kpi', fuelController.getFuelLogsKPI);
+router.get('/fuel-analytics', fuelController.getFuelAnalytics);
+router.put('/fuel-logs/:id/status', fuelController.updateFuelLogStatus);
 
 // Reports & Analytics
 router.get('/reports/revenue', reportController.getRevenue);

@@ -1,6 +1,7 @@
 // Base URL for the backend API
 const API_URL = 'http://localhost:5000/api'
 // const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
+// const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -41,6 +42,10 @@ async function fetchAPI(endpoint, options = {}) {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
+
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -311,6 +316,25 @@ export const api = {
         body: JSON.stringify(tractorData)
       });
     },
+    // Fuel Management
+    getFuelLogs: async (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return await fetchAPI(`/admin/fuel-logs?${query}`);
+    },
+    getFuelLogsKPI: async (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return await fetchAPI(`/admin/fuel-logs/kpi?${query}`);
+    },
+    getFuelAnalytics: async (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return await fetchAPI(`/admin/fuel-analytics?${query}`);
+    },
+    updateFuelLogStatus: async (id, status) => {
+      return await fetchAPI(`/admin/fuel-logs/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      });
+    },
     reports: {
       getRevenue: async (rangeVal = '7d') => {
         return await fetchAPI(`/admin/reports/revenue?range=${rangeVal}`);
@@ -408,7 +432,7 @@ export const api = {
     addFuelLog: async (fuelData) => {
       return await fetchAPI('/operator/fuel', {
         method: 'POST',
-        body: JSON.stringify(fuelData)
+        body: fuelData instanceof FormData ? fuelData : JSON.stringify(fuelData)
       });
     },
     getFuelHistory: async () => {

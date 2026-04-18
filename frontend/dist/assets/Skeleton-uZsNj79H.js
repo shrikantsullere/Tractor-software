@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-VxthebF7.js";import{t}from"./utils-BmxWZ5P-.js";var n=e();function r({className:e,...r}){return(0,n.jsx)(`div`,{className:t(`animate-pulse rounded-md bg-earth-dark/5`,e),...r})}export{r as t};

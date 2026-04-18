@@ -9,10 +9,20 @@ export const addFuelLog = async (operatorId, data) => {
   if (!cost || cost <= 0) throw new Error("Invalid cost amount");
   if (!station) throw new Error("Station name is required");
 
+  let finalTractorId = tractorId ? parseInt(tractorId) : null;
+  if (!finalTractorId) {
+    const tractor = await prisma.tractor.findFirst({
+      where: { operatorId: parseInt(operatorId) }
+    });
+    if (tractor) {
+      finalTractorId = tractor.id;
+    }
+  }
+
   return await prisma.fuelLog.create({
     data: {
       operatorId,
-      tractorId: tractorId ? parseInt(tractorId) : null,
+      tractorId: finalTractorId,
       liters: parseFloat(liters),
       cost: parseFloat(cost),
       station,
@@ -24,7 +34,8 @@ export const addFuelLog = async (operatorId, data) => {
 export const getFuelHistory = async (operatorId) => {
   return await prisma.fuelLog.findMany({
     where: { operatorId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
+    include: { tractor: true }
   });
 };
 

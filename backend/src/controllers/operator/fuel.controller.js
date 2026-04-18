@@ -3,7 +3,12 @@ import { formatCurrency } from '../../utils/format.js';
 
 export const addFuelLog = async (req, res) => {
   try {
-    const log = await fuelService.addFuelLog(req.user.id, req.body);
+    const fuelData = { ...req.body };
+    if (req.file) {
+      // Create full URL or relative path. For now, relative path.
+      fuelData.receiptUrl = `/uploads/${req.file.filename}`;
+    }
+    const log = await fuelService.addFuelLog(req.user.id, fuelData);
     res.status(201).json({ success: true, data: log });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

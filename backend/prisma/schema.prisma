@@ -25,6 +25,7 @@ model User {
   fuelLogs         FuelLog[] @relation("OperatorFuelLogs")
   tractor          Tractor?       @relation("OperatorTractor")
   notifications    Notification[] @relation("UserNotifications")
+  fuelLogsReviewed FuelLog[]      @relation("AdminFuelLogReviews")
 
   @@map("users")
 }
@@ -157,11 +158,16 @@ model FuelLog {
   station    String
   receiptUrl String?  @map("receipt_url")
   createdAt  DateTime @default(now()) @map("created_at")
+  status     String   @default("PENDING")
+  reviewedBy Int?     @map("reviewed_by")
+  reviewedAt DateTime? @map("reviewed_at")
   operator   User     @relation("OperatorFuelLogs", fields: [operatorId], references: [id])
   tractor    Tractor? @relation("TractorFuelLogs", fields: [tractorId], references: [id])
+  reviewer   User?    @relation("AdminFuelLogReviews", fields: [reviewedBy], references: [id])
 
   @@index([operatorId], map: "fuel_logs_operator_id_fkey")
   @@index([tractorId], map: "fuel_logs_tractor_id_fkey")
+  @@index([reviewedBy], map: "fuel_logs_reviewed_by_fkey")
   @@map("fuel_logs")
 }
 

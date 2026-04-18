@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Fuel as FuelIcon, PlusCircle, Calendar, ArrowRight, Zap, Upload, FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { Fuel as FuelIcon, PlusCircle, Calendar, ArrowRight, Zap, Upload, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { api } from '../../lib/api';
+import { api, clearApiCache } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 
 export default function Fuel() {
@@ -20,9 +20,9 @@ export default function Fuel() {
   const [receipt, setReceipt] = useState(null);
   const fileInputRef = useRef(null);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [historyRes, summaryRes] = await Promise.all([
         api.operator.getFuelHistory(),
         api.operator.getFuelSummary()
@@ -60,21 +60,21 @@ export default function Fuel() {
 
     try {
       setSubmitting(true);
-      // In a real app with file upload, we would use FormData here.
-      // For now, we follow the API spec which takes a JSON body.
-      const fuelData = {
-        liters: parseFloat(formData.amount),
-        cost: parseFloat(formData.cost),
-        station: formData.station,
-        receiptUrl: receipt ? "pending_upload" : null // Receipt handling placeholder
-      };
+      const formDataObj = new FormData();
+      formDataObj.append('liters', formData.amount);
+      formDataObj.append('cost', formData.cost);
+      formDataObj.append('station', formData.station);
+      if (receipt) {
+        formDataObj.append('receipt', receipt);
+      }
 
-      const res = await api.operator.addFuelLog(fuelData);
+      const res = await api.operator.addFuelLog(formDataObj);
       if (res.success) {
+        clearApiCache();
         setFormData({ amount: '', cost: '', station: '' });
         setReceipt(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        await fetchData();
+        await fetchData(true);
       }
     } catch (err) {
       console.error("Failed to add fuel log:", err);
@@ -220,8 +220,15 @@ export default function Fuel() {
                         <Calendar size={10} className="text-earth-primary/50" /> {new Date(log.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}
                       </p>
                       {log.receiptUrl && (
-                        <span className="flex items-center gap-1 text-earth-green text-[8px] font-black uppercase tracking-widest bg-earth-primary/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                          <FileText size={8} /> Receipt
+                        <span className="flex items-center gap-1 text-blue-500 text-[8px] font-black uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-sm cursor-pointer hover:bg-blue-500 hover:text-white transition-colors" onClick={() => {
+                            if (log.receiptUrl.endsWith('.pdf')) {
+                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `http://localhost:5000${log.receiptUrl}`, '_blank');
+                            } else {
+                              // Could open preview modal, but opening in new tab is safe fallback
+                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `http://localhost:5000${log.receiptUrl}`, '_blank');
+                            }
+                          }}>
+                          <FileText size={8} /> View Receipt
                         </span>
                       )}
                     </div>
@@ -229,7 +236,16 @@ export default function Fuel() {
                 </div>
                 <div className="text-right">
                   <p className="font-black text-earth-brown text-lg tracking-tighter uppercase leading-none">{formatCurrency(log.cost)}</p>
-                  <p className="text-[8px] uppercase font-black tracking-widest text-earth-mut mt-2 max-w-[150px] truncate bg-earth-card/50 px-2 py-1 rounded inline-block">{log.station}</p>
+                  <p className="text-[8px] uppercase font-black tracking-widest text-earth-mut mt-2 max-w-[150px] truncate bg-earth-card/50 px-2 py-1 rounded inline-block mb-1">{log.station}</p>
+                  <div>
+                    {log.status === 'APPROVED' ? (
+                      <span className="text-[8px] font-black text-earth-green uppercase tracking-widest flex items-center justify-end gap-1"><CheckCircle2 size={10} /> Approved</span>
+                    ) : log.status === 'REJECTED' ? (
+                      <span className="text-[8px] font-black text-red-500 uppercase tracking-widest flex items-center justify-end gap-1"><XCircle size={10} /> Rejected</span>
+                    ) : (
+                      <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest flex items-center justify-end gap-1"><Clock size={10} /> Pending</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )) : (
