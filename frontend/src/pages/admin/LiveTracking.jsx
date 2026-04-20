@@ -5,7 +5,8 @@ import L from 'leaflet';
 import { api } from '../../lib/api';
 import 'leaflet/dist/leaflet.css';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
+// const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 const OPENFREE_TILES = 'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png';
 const OSM_FALLBACK_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };

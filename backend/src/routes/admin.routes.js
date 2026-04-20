@@ -5,6 +5,7 @@ import * as dashboardController from '../controllers/admin/dashboard.controller.
 import * as reportController from '../controllers/admin/report.controller.js';
 import * as settingsController from '../controllers/admin/settings.controller.js';
 import * as fuelController from '../controllers/admin/fuel.controller.js';
+import * as ussdLocationController from '../controllers/admin/ussdLocation.controller.js';
 import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -24,6 +25,9 @@ router.get('/bookings', adminController.getBookings);
 router.get('/bookings/:id', adminController.getBookingById);
 router.get('/payments', adminController.getPayments);
 router.post('/settle-booking/:bookingId', adminController.settleBooking);
+// removed dummy sim route
+router.put('/bookings/:id/fix-location', adminController.fixUSSDBooking);
+router.post('/payments/record-cash', adminController.recordCashPayment);
 
 // Assignment feature
 router.get('/pending-assignment', assignmentController.getPendingBookings);
@@ -74,6 +78,12 @@ router.get('/settings/zones', settingsController.listZones);
 router.post('/settings/zones', settingsController.createZone);
 router.put('/settings/zones/:id', settingsController.updateZone);
 router.delete('/settings/zones/:id', settingsController.deleteZone);
+
+// System Settings - USSD Locations
+router.get('/settings/ussd-locations', ussdLocationController.listAll);
+router.post('/settings/ussd-locations', ussdLocationController.create);
+router.put('/settings/ussd-locations/:id', ussdLocationController.update);
+router.delete('/settings/ussd-locations/:id', ussdLocationController.remove);
 
 // System Settings - Services
 router.get('/services', settingsController.listServices);

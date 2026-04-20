@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, Search, Filter, MoreVertical, FileText, Clock, Tractor as TractorIcon, CheckCircle2, ChevronDown, Trash2, CheckCircle, X, MapPin, Navigation, ArrowDown, Info, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Search, Filter, MoreVertical, FileText, Clock, Tractor as TractorIcon, CheckCircle2, ChevronDown, Trash2, CheckCircle, X, MapPin, Navigation, ArrowDown, Info, Calendar, ChevronLeft, ChevronRight, Phone, Zap } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -13,6 +13,7 @@ import { api } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import RequestLocationMap from '../../components/map/RequestLocationMap';
 
 export default function Bookings() {
   const { bookings, pagination, totalCount, fetchBookings, updateBookingStatus } = useBookings();
@@ -26,6 +27,25 @@ export default function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  // USSD Simulation states removed
+  const [availableServices, setAvailableServices] = useState([]);
+  
+  // States for fixing USSD location
+  const [isFixLocationModalOpen, setIsFixLocationModalOpen] = useState(false);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
+  const [fixedPoint, setFixedPoint] = useState(null);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const res = await api.admin.listServices();
+        if (res.success) setAvailableServices(res.data || []);
+      } catch (err) {
+        console.error("Failed to load services:", err);
+      }
+    };
+    loadServices();
+  }, []);
 
   // Sync with server on filter/search/page change
   useEffect(() => {
@@ -81,6 +101,8 @@ export default function Bookings() {
     }
   };
 
+  // USSD Booking handler removed
+
   const handleExport = () => {
     setIsExporting(true);
     try {
@@ -115,6 +137,41 @@ export default function Bookings() {
       console.error("Export failed:", err);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleSaveFixedLocation = async () => {
+    if (!fixedPoint) {
+      alert("Please select a location on the map");
+      return;
+    }
+    
+    setIsSavingLocation(true);
+    try {
+      const res = await api.admin.fixUSSDBooking(selectedBooking.id, {
+        latitude: fixedPoint.lat,
+        longitude: fixedPoint.lng
+      });
+      
+      if (res.success) {
+        // Update selected booking details in UI
+        setSelectedBooking(res.data);
+        
+        // Refresh the list to show updated price/status
+        fetchBookings({ 
+          page: pagination.currentPage, 
+          status: statusFilter, 
+          search: searchTerm 
+        });
+        
+        setIsFixLocationModalOpen(false);
+        setFixedPoint(null);
+        alert("Location and price finalized successfully!");
+      }
+    } catch (err) {
+      alert(err.message || "Failed to finalize location");
+    } finally {
+      setIsSavingLocation(false);
     }
   };
 
@@ -160,6 +217,8 @@ export default function Bookings() {
               {isExporting ? <Clock size={16} className="animate-spin" /> : <FileText size={16} />}
               <span className="hidden lg:inline text-[10px]">Export</span>
             </Button>
+
+            {/* Simulate USSD button removed */}
           </div>
         </div>
       </header>
@@ -198,13 +257,18 @@ export default function Bookings() {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <Badge className={cn(
-                      "text-[9px] px-3 py-0.5 border uppercase font-black tracking-[0.1em]",
-                      booking.status?.toLowerCase() === 'completed' ? 'bg-earth-primary/20 text-earth-green border-emerald-500/20' : 
-                      'bg-earth-dark/10 text-earth-mut border-earth-dark/15'
-                    )}>
-                      {booking.status}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-start">
+                      <Badge className={cn(
+                        "text-[9px] px-3 py-0.5 border uppercase font-black tracking-[0.1em]",
+                        booking.status?.toLowerCase() === 'completed' ? 'bg-earth-primary/20 text-earth-green border-emerald-500/20' : 
+                        'bg-earth-dark/10 text-earth-mut border-earth-dark/15'
+                      )}>
+                        {booking.status}
+                      </Badge>
+                      {booking.source === 'USSD' && (
+                        <Badge className="text-[8px] px-2 py-0 bg-blue-500/10 text-blue-500 border border-blue-500/20 font-black uppercase tracking-widest">USSD Node</Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-8 py-5">
                     {(() => {
@@ -275,6 +339,9 @@ export default function Bookings() {
                         )}>
                           {booking.status}
                         </Badge>
+                        {booking.source === 'USSD' && (
+                          <Badge className="bg-blue-500/10 text-[8px] font-black text-blue-500 border border-blue-500/20 px-1.5 uppercase tracking-tighter">USSD</Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -501,6 +568,37 @@ export default function Bookings() {
                         )}>{selectedBooking.status}</Badge>
                     </div>
                   </div>
+
+                  {/* USSD Location Fix Section */}
+                  {selectedBooking.source === 'USSD' && (
+                    <div className="p-4 bg-blue-500/5 rounded-[1.5rem] border border-blue-500/10 space-y-3">
+                       <div className="flex justify-between items-center">
+                          <div className="text-left">
+                             <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 italic">
+                               <Zap size={12} />
+                               USSD Booking Source
+                             </h4>
+                             {selectedBooking.locationFixed ? (
+                               <p className="text-[9px] font-bold text-earth-green mt-1 flex items-center gap-1">
+                                 <CheckCircle size={10} /> Location fixed & Price visible
+                               </p>
+                             ) : (
+                               <p className="text-[9px] font-bold text-orange-400 mt-1 flex items-center gap-1">
+                                 <Info size={10} /> Location and price need to be finalized
+                               </p>
+                             )}
+                          </div>
+                          {!selectedBooking.locationFixed && (
+                             <Button 
+                               onClick={() => setIsFixLocationModalOpen(true)}
+                               className="bg-accent text-white hover:opacity-90 font-black text-[9px] uppercase tracking-widest px-4 h-8 rounded-lg shadow-lg border-none"
+                             >
+                               Fix Location & Price
+                             </Button>
+                          )}
+                       </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Footer - Registry Sync Action */}
@@ -517,6 +615,77 @@ export default function Bookings() {
             </div>
           )}
         </AnimatePresence>,
+        document.body
+      )}
+
+      {/* USSD Simulation modal removed */}
+
+      {/* Fix USSD Location Modal */}
+      {isFixLocationModalOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-earth-dark/70 backdrop-blur-md"
+            onClick={() => setIsFixLocationModalOpen(false)}
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl z-10"
+          >
+            <div className="p-6 border-b border-earth-dark/10 flex justify-between items-center bg-earth-main/5 text-left">
+              <div className="flex items-center gap-3">
+                <MapPin className="text-earth-primary" size={20} />
+                <h3 className="font-black text-earth-brown uppercase tracking-tight text-base italic">Fix Booking Location</h3>
+              </div>
+              <button 
+                onClick={() => setIsFixLocationModalOpen(false)}
+                className="p-2 hover:bg-earth-dark/5 rounded-xl transition-colors"
+              >
+                <X size={20} className="text-earth-mut" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-left">
+              <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex items-start gap-3">
+                <Info size={18} className="text-orange-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-bold text-earth-brown leading-relaxed">
+                  Select the exact location of the farmer on the map. This will automatically calculate the distance from the hub and update the booking price based on current rates.
+                </p>
+              </div>
+
+              <div className="rounded-2xl overflow-hidden border border-earth-dark/10 shadow-inner">
+                <RequestLocationMap 
+                  selectedLocation={fixedPoint}
+                  onPick={(point) => setFixedPoint(point)}
+                  autoUseCurrentLocation={false}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  onClick={() => setIsFixLocationModalOpen(false)}
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl font-black uppercase text-[10px] tracking-widest border-earth-dark/10 text-earth-mut hover:bg-earth-dark/5"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveFixedLocation}
+                  disabled={isSavingLocation || !fixedPoint}
+                  className="flex-[2] h-12 bg-accent hover:opacity-90 text-white font-black uppercase tracking-[0.2em] rounded-xl shadow-lg border-none"
+                >
+                  {isSavingLocation ? (
+                    <Clock size={18} className="animate-spin" />
+                  ) : (
+                    <>Update & Recalculate Price</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>,
         document.body
       )}
     </div>

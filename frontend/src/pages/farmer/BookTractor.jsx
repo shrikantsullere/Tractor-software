@@ -100,9 +100,7 @@ export default function BookTractor() {
         setSelectedMapLocation({ lat, lng });
         setFarmerLatitude(String(lat));
         setFarmerLongitude(String(lng));
-        if (!location) {
-          setLocation(`Location Selected`);
-        }
+        // Location text removed to allow manual entry
         setErrors((prev) => {
           const newErrors = { ...prev };
           delete newErrors.location;
@@ -415,9 +413,7 @@ export default function BookTractor() {
                       setSelectedMapLocation({ lat, lng });
                       setFarmerLatitude(String(lat));
                       setFarmerLongitude(String(lng));
-                      if (!location || source === 'gps') {
-                        setLocation(`Location Selected`);
-                      }
+                      // Location text removed to allow manual entry
                       setErrors((prev) => {
                         const newErr = { ...prev };
                         delete newErr.location;

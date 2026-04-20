@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, Search, Filter, Download, MoreVertical, Eye, CreditCard, Clock, CheckCircle, X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Search, Filter, Download, MoreVertical, Eye, CreditCard, Clock, CheckCircle, X, ChevronLeft, ChevronRight, AlertTriangle, Banknote, Zap, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,14 +21,21 @@ export default function Payments() {
   const [isExporting, setIsExporting] = useState(false);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCount: 0 });
   const [confirmSettleId, setConfirmSettleId] = useState(null);
+  
+  // State for recording cash payments
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  const [cashBooking, setCashBooking] = useState(null);
+  const [cashAmount, setCashAmount] = useState('');
+  const [isSubmittingCash, setIsSubmittingCash] = useState(false);
 
-  const fetchPayments = async (page = 1) => {
+  const fetchPayments = async (page = 1, silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const result = await api.admin.getPayments({ 
         page, 
         status: statusFilter, 
-        search: searchTerm 
+        search: searchTerm,
+        skipCache: true 
       });
       if (result.success) {
         setRevenueData(result.data);
@@ -41,7 +48,7 @@ export default function Payments() {
     } catch (error) {
       console.error('Failed to fetch payments:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -109,6 +116,70 @@ export default function Payments() {
       console.error("PDF Export failed:", err);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleRecordCashSubmit = async () => {
+    const bookingId = cashBooking.bookingId || cashBooking.id;
+    if (!bookingId || !cashAmount || isNaN(cashAmount)) return;
+    
+    setIsSubmittingCash(true);
+    try {
+      const parsedAmount = parseFloat(cashAmount);
+      const res = await api.admin.recordCashPayment({
+        bookingId: parseInt(String(bookingId).replace('DUE-', '')),
+        amount: parsedAmount
+      });
+      
+      if (res.success) {
+        // Optimistic UI update instantly reflects changes
+        setRevenueData(prev => {
+          if (!prev || !prev.payments) return prev;
+          
+          let statAdjustment = 0;
+          const updatedPayments = prev.payments.map(p => {
+            const pId = String(p.bookingId || p.id).replace('DUE-', '');
+            const targetId = String(bookingId).replace('DUE-', '');
+            if (pId === targetId) {
+              statAdjustment += parsedAmount;
+              const newPaid = (p.paidAmount || 0) + parsedAmount;
+              const newRemaining = Math.max(0, (p.totalAmount || 0) - newPaid);
+              const newStatus = newRemaining <= 0 ? 'PAID' : 'PARTIAL';
+              return {
+                ...p,
+                paidAmount: newPaid,
+                remainingAmount: newRemaining,
+                paymentStatus: newStatus,
+                booking: {
+                  ...p.booking,
+                  paymentStatus: newStatus
+                }
+              };
+            }
+            return p;
+          });
+          
+          return { 
+            ...prev, 
+            payments: updatedPayments,
+            totalRevenue: (prev.totalRevenue || 0) + statAdjustment,
+            totalUnpaid: Math.max(0, (prev.totalUnpaid || 0) - statAdjustment)
+          };
+        });
+
+        setIsCashModalOpen(false);
+        setCashAmount('');
+        setCashBooking(null);
+        
+        // Background sync with tiny delay to ensure server persistence reflects in next query
+        setTimeout(() => {
+          fetchPayments(pagination.currentPage, true);
+        }, 300);
+      }
+    } catch (err) {
+      alert(err.message || "Failed to record payment");
+    } finally {
+      setIsSubmittingCash(false);
     }
   };
 
@@ -329,12 +400,19 @@ export default function Payments() {
                   return (
                     <tr key={p.id} className={cn("hover:bg-earth-primary/5 transition-all group", p.type === 'due' ? "bg-red-500/5" : "")}>
                       <td className="px-8 py-5">
-                        <span className={cn(
-                          "font-bold text-[10px] bg-earth-card border px-2 py-1 rounded uppercase tracking-widest transition-colors",
-                          p.type === 'due' ? "text-red-400 border-red-500/20" : "text-earth-mut border-earth-dark/10 group-hover:text-earth-primary"
-                        )}>
-                          {String(p.id).toUpperCase()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "font-bold text-[10px] bg-earth-card border px-2 py-1 rounded uppercase tracking-widest transition-colors",
+                            p.type === 'due' ? "text-red-400 border-red-500/20" : "text-earth-mut border-earth-dark/10 group-hover:text-earth-primary"
+                          )}>
+                            {String(p.id).toUpperCase()}
+                          </span>
+                          {p.booking?.source === 'USSD' && (
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[8px] px-1 py-0 font-black flex items-center gap-0.5">
+                              <Zap size={8} /> USSD
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <p className="font-black text-earth-brown text-sm">{p.booking?.farmer?.name || 'Unknown'}</p>
@@ -362,6 +440,15 @@ export default function Payments() {
                       </td>
                       <td className="px-8 py-5 text-right">
                         <div className="flex justify-end gap-1.5 transition-all">
+                          {p.booking?.source === 'USSD' && p.remainingAmount > 0 && (
+                            <Button 
+                              onClick={() => { setCashBooking(p); setCashAmount(String(p.remainingAmount)); setIsCashModalOpen(true); }}
+                              className="w-8 h-8 rounded-lg bg-emerald-500 text-white hover:opacity-90 shadow-lg shadow-emerald-500/20 border-none flex items-center justify-center p-0 transition-all active:scale-95"
+                              title="Receive Cash"
+                            >
+                              <Banknote size={14} />
+                            </Button>
+                          )}
                           <Button 
                             onClick={() => setSelectedBooking(p)}
                             className="w-8 h-8 rounded-lg bg-accent text-white hover:opacity-90 shadow-lg shadow-accent/20 border-none flex items-center justify-center p-0 transition-all active:scale-95"
@@ -442,6 +529,85 @@ export default function Payments() {
           })}
         </div>
       </div>
+      {/* Record Cash Payment Modal */}
+      {isCashModalOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-earth-dark/70 backdrop-blur-md"
+            onClick={() => setIsCashModalOpen(false)}
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl z-10"
+          >
+            <div className="p-6 border-b border-earth-dark/10 flex justify-between items-center bg-earth-main/5 text-left">
+              <div className="flex items-center gap-3">
+                <Banknote className="text-emerald-500" size={20} />
+                <h3 className="font-black text-earth-brown uppercase tracking-tight text-base italic text-left">Record Cash Payment</h3>
+              </div>
+              <button 
+                onClick={() => setIsCashModalOpen(false)}
+                className="p-2 hover:bg-earth-dark/5 rounded-xl transition-colors"
+                disabled={isSubmittingCash}
+              >
+                <X size={20} className="text-earth-mut" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6 text-left">
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                   <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest mb-1.5 leading-none">Target Entity</p>
+                   <p className="text-sm font-black text-earth-brown uppercase italic leading-tight">
+                     {cashBooking?.booking?.farmer?.name || 'Unknown Farmer'}
+                   </p>
+                   <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-1">Ref: {String(cashBooking?.id).toUpperCase()}</p>
+                </div>
+
+                <div className="p-4 bg-earth-main rounded-2xl border border-earth-dark/10">
+                   <div className="flex justify-between items-center mb-3">
+                     <p className="text-[10px] font-black text-earth-mut uppercase tracking-widest leading-none">Amount to Receive</p>
+                     <span className="text-[10px] font-black text-earth-brown uppercase tracking-widest italic opacity-60">Balance: {formatCurrency(cashBooking?.remainingAmount || 0)}</span>
+                   </div>
+                   <div className="relative">
+                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg text-earth-brown opacity-40 italic">₦</span>
+                     <Input 
+                        autoFocus
+                        type="number"
+                        placeholder="0.00"
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(e.target.value)}
+                        className="pl-10 h-14 bg-white border-earth-dark/15 text-xl font-black rounded-xl text-earth-brown focus:ring-2 focus:ring-emerald-500/50"
+                     />
+                   </div>
+                </div>
+              </div>
+
+              <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10 flex gap-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                   <ShieldCheck size={16} className="text-emerald-500" />
+                </div>
+                <p className="text-[9px] font-bold text-earth-mut uppercase leading-relaxed tracking-wide">
+                  This action will manually record cash as a <span className="text-emerald-600 font-black">LEGALLY VALID</span> payment method for this USSD booking.
+                </p>
+              </div>
+
+              <Button 
+                onClick={handleRecordCashSubmit}
+                isLoading={isSubmittingCash}
+                disabled={!cashAmount || isSubmittingCash || parseFloat(cashAmount) <= 0}
+                className="w-full h-14 bg-emerald-600 hover:scale-[1.02] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-600/20 disabled:grayscale transition-all active:scale-95 border-none"
+              >
+                Confirm Receipt
+              </Button>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

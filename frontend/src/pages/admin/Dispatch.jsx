@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Navigation, ArrowRight, CheckCircle, ShieldCheck, Zap, X, Loader2, Mail } from 'lucide-react';
+import { MapPin, Navigation, ArrowRight, CheckCircle, ShieldCheck, Zap, X, Loader2, Mail, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -171,7 +171,14 @@ export default function Dispatch() {
               >
                 {isSelected && <div className="absolute top-4 right-4 text-earth-primary animate-in zoom-in"><CheckCircle size={20} fill="#eab308" className="text-earth-brown" /></div>}
                 
-                <div className="flex justify-between items-start mb-4">
+                {job.source === 'USSD' && !job.locationFixed && (
+                  <div className="absolute top-0 left-0 right-0 bg-orange-500/10 border-b border-orange-500/20 py-1.5 px-4 flex items-center gap-2">
+                    <Info size={12} className="text-orange-500" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-orange-600">Pending location & price fix</span>
+                  </div>
+                )}
+
+                <div className={cn("flex justify-between items-start mb-4", job.source === 'USSD' && !job.locationFixed && "mt-4")}>
                   <div>
                     <h4 className={cn("font-black text-base sm:text-lg transition-colors uppercase tracking-tight", isSelected ? "text-earth-primary" : "text-earth-brown group-hover:text-earth-primary")}>{job.farmer?.name || 'Unknown Farmer'}</h4>
                     <span className="text-[9px] sm:text-[10px] font-bold text-earth-mut uppercase tracking-[0.2em] flex items-center gap-1.5"><Mail size={10} /> Contact: {job.farmer?.phone || 'N/A'}</span>
@@ -180,6 +187,14 @@ export default function Dispatch() {
                     {job.service?.name?.toUpperCase() || 'SERVICE'}
                   </Badge>
                 </div>
+
+                {job.source === 'USSD' && !job.locationFixed && (
+                  <div className="mb-4 p-3 bg-orange-500/5 border border-orange-500/10 rounded-xl">
+                    <p className="text-[9px] font-bold text-orange-700 uppercase leading-relaxed tracking-wide text-left">
+                      ⚠️ Complete location and pricing in Bookings before assigning this job
+                    </p>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div className="flex items-center gap-2.5 p-3 bg-earth-main rounded-xl border border-earth-dark/10">
@@ -204,9 +219,15 @@ export default function Dispatch() {
                     <Button 
                       size="sm" 
                       onClick={(e) => { e.stopPropagation(); setSchedulingJob(job); }}
-                      className="rounded-xl font-black text-[10px] uppercase tracking-widest px-6 h-9 transition-all bg-accent text-white hover:scale-105 active:scale-95 shadow-md shadow-accent/10 border-none"
+                      disabled={job.source === 'USSD' && !job.locationFixed}
+                      className={cn(
+                        "rounded-xl font-black text-[10px] uppercase tracking-widest px-6 h-9 transition-all shadow-md border-none",
+                        job.source === 'USSD' && !job.locationFixed 
+                          ? "bg-earth-dark/20 text-earth-mut cursor-not-allowed opacity-50" 
+                          : "bg-accent text-white hover:scale-105 active:scale-95 shadow-accent/10"
+                      )}
                     >
-                      Review & Schedule
+                      {job.source === 'USSD' && !job.locationFixed ? "Requires Fixing" : "Review & Schedule"}
                     </Button>
                   ) : (
                     <Button 
@@ -299,7 +320,7 @@ export default function Dispatch() {
                     <Button 
                       size="sm" 
                       isLoading={isOperatorSelected && isDispatching}
-                      disabled={!canAssign || isDispatching}
+                      disabled={!canAssign || isDispatching || (selectedJob?.source === 'USSD' && !selectedJob?.locationFixed)}
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         setSelectedOperator(op); 
@@ -312,7 +333,7 @@ export default function Dispatch() {
                           : "bg-earth-card hover:bg-earth-card-alt text-earth-sub hover:text-accent"
                       )}
                     >
-                      {!op.isDispatchReady ? "Unavailable" : isOperatorSelected && isDispatching ? "" : isOperatorSelected ? "Confirm" : "Assign"} {!isDispatching && <ArrowRight size={14} />}
+                      {!op.isDispatchReady ? "Unavailable" : (selectedJob?.source === 'USSD' && !selectedJob?.locationFixed) ? "Job Locked" : isOperatorSelected && isDispatching ? "" : isOperatorSelected ? "Confirm" : "Assign"} {!isDispatching && <ArrowRight size={14} />}
                     </Button>
                   </Card>
                 );
@@ -328,9 +349,11 @@ export default function Dispatch() {
                   </div>
                   <h5 className="text-xs font-black text-earth-brown uppercase tracking-widest mb-2">Fleet Locked</h5>
                   <p className="text-[10px] font-bold text-earth-mut leading-relaxed uppercase">
-                    {selectedJob?.status?.toUpperCase() === 'PENDING' 
-                      ? "This job must be scheduled first before assigning resources." 
-                      : "Select a scheduled job from the left queue to unlock the fleet for dispatching."
+                    {selectedJob?.source === 'USSD' && !selectedJob?.locationFixed
+                      ? "Complete location and pricing in Bookings before assigning this job."
+                      : selectedJob?.status?.toUpperCase() === 'PENDING' 
+                        ? "This job must be scheduled first before assigning resources." 
+                        : "Select a scheduled job from the left queue to unlock the fleet for dispatching."
                     }
                   </p>
                </div>

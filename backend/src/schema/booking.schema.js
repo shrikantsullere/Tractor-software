@@ -13,7 +13,9 @@ export const bookingCreateSchema = z.object({
   // 'full'    → create full Payment record immediately
   // 'partial' → create 50% advance Payment record
   // 'later'   → no Payment record (default, cash at hub)
-  paymentOption: z.enum(['full', 'partial', 'later']).optional().default('later')
+  paymentOption: z.enum(['full', 'partial', 'later']).optional().default('later'),
+  source: z.enum(['WEB', 'USSD']).optional().default('WEB'),
+  locationFixed: z.boolean().optional().default(true)
 });
 
 // Price preview does not need paymentOption — keep it separate

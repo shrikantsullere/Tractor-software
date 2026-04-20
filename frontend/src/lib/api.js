@@ -1,7 +1,7 @@
 // Base URL for the backend API
-const API_URL = 'http://localhost:5000/api'
+// const API_URL = 'http://localhost:5000/api'
 // const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
-// const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
+const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -24,11 +24,16 @@ async function fetchAPI(endpoint, options = {}) {
   const cacheKey = `${method}:${endpoint}:${options.body || ''}`;
 
   // 1. Caching (GET only)
-  if (method === 'GET') {
+  if (method === 'GET' && !options.skipCache) {
     const cached = apiCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
       return cached.data;
     }
+  }
+
+  // Clear cache on write operations
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    apiCache.clear();
   }
 
   // 2. Request Deduplication
@@ -259,11 +264,25 @@ export const api = {
       });
     },
     getPayments: async (params = {}) => {
-      const query = new URLSearchParams(params).toString();
-      return await fetchAPI(`/admin/payments?${query}`);
+      const { skipCache, ...queryParams } = params;
+      const query = new URLSearchParams(queryParams).toString();
+      return await fetchAPI(`/admin/payments?${query}`, { skipCache });
     },
     settleBooking: async (bookingId, data = { method: 'cash' }) => {
       return await fetchAPI(`/admin/settle-booking/${bookingId}`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    // Simulation API removed
+    fixUSSDBooking: async (id, locationData) => {
+      return await fetchAPI(`/admin/bookings/${id}/fix-location`, {
+        method: 'PUT',
+        body: JSON.stringify(locationData)
+      });
+    },
+    recordCashPayment: async (data) => {
+      return await fetchAPI('/admin/payments/record-cash', {
         method: 'POST',
         body: JSON.stringify(data)
       });
@@ -412,6 +431,27 @@ export const api = {
       return await fetchAPI(`/admin/services/${id}`, {
         method: 'PUT',
         body: JSON.stringify(serviceData)
+      });
+    },
+    // USSD Locations
+    listUssdLocations: async () => {
+      return await fetchAPI('/admin/settings/ussd-locations');
+    },
+    createUssdLocation: async (data) => {
+      return await fetchAPI('/admin/settings/ussd-locations', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    updateUssdLocation: async (id, data) => {
+      return await fetchAPI(`/admin/settings/ussd-locations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    },
+    deleteUssdLocation: async (id) => {
+      return await fetchAPI(`/admin/settings/ussd-locations/${id}`, {
+        method: 'DELETE'
       });
     }
   },

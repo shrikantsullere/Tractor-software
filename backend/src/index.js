@@ -8,8 +8,9 @@ import farmerRoutes from './routes/farmer.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
-import requestRoutes from './routes/request.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import requestRoutes from './routes/request.routes.js';
+import ussdRoutes from './routes/ussd.routes.js';
 import { sendError } from './utils/response.js';
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/operator', operatorRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/request', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/ussd', ussdRoutes);
 
 // Root Route
 app.get('/', (req, res) => {

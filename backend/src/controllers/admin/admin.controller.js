@@ -209,3 +209,56 @@ export const updateTractor = async (req, res) => {
     return sendError(res, error.message, statusCode);
   }
 };
+
+// Removed USSD Simulation handler
+
+/**
+ * Handle fixing of USSD booking location and price recalculation.
+ */
+export const fixUSSDBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return sendError(res, "Coordinates are required", 400);
+    }
+
+    const result = await adminService.fixUSSDBooking(id, latitude, longitude);
+
+    // Format fields for response consistency
+    const formattedResult = {
+      ...result,
+      formatted_total_price: formatCurrency(result.totalPrice),
+      formatted_base_price: formatCurrency(result.basePrice),
+      formatted_distance_charge: formatCurrency(result.distanceCharge)
+    };
+
+    return sendSuccess(res, formattedResult, "USSD booking location and price finalized");
+  } catch (error) {
+    const statusCode = error.message.includes('not found') ? 404 : 
+                       error.message.includes('fixed') || error.message.includes('Only USSD') ? 400 : 500;
+    return sendError(res, error.message, statusCode);
+  }
+};
+
+/**
+ * Handle manual recording of cash payments for USSD bookings.
+ */
+export const recordCashPayment = async (req, res) => {
+  try {
+    const { bookingId, amount } = req.body;
+
+    if (!bookingId || isNaN(amount) || amount <= 0) {
+      return sendError(res, "Valid Booking ID and Amount are required", 400);
+    }
+
+    const result = await adminService.recordCashPayment(bookingId, amount);
+
+    return sendSuccess(res, result, "Cash payment recorded successfully");
+  } catch (error) {
+    const statusCode = error.message.includes('not found') ? 404 : 
+                       error.message.includes('fully paid') || error.message.includes('exceeding') ? 400 : 500;
+    return sendError(res, error.message, statusCode);
+  }
+};

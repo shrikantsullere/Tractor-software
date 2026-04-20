@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
+import { calculateBookingPrice } from './booking.service.js';
 
 export const getPendingBookings = async () => {
   return await prisma.booking.findMany({
@@ -741,3 +742,111 @@ export const updateTractor = async (id, data) => {
     }
   });
 };
+
+// Simulation logic removed
+
+/**
+ * Finalize USSD booking by fixing location and calculating price.
+ * Reuses existing pricing logic to ensure consistency.
+ */
+export const fixUSSDBooking = async (bookingId, farmerLatitude, farmerLongitude) => {
+  const bId = parseInt(bookingId);
+  const booking = await prisma.booking.findUnique({
+    where: { id: bId },
+    include: { service: true }
+  });
+
+  if (!booking) throw new Error('Booking not found');
+  if (booking.source !== 'USSD') throw new Error('Only USSD bookings can be fixed this way');
+  if (booking.locationFixed) throw new Error('Booking location is already fixed');
+
+  // Recalculate price based on new coordinates
+  // Service name might be in serviceNameSnapshot (from simulateUSSDBooking) or service.name
+  const serviceName = booking.serviceNameSnapshot || booking.service?.name;
+  
+  const pricing = await calculateBookingPrice(
+    serviceName,
+    booking.landSize,
+    null, // zoneId (calculateBookingPrice handles null and uses lat/lng)
+    farmerLatitude,
+    farmerLongitude
+  );
+
+  return await prisma.booking.update({
+    where: { id: bId },
+    data: {
+      farmerLatitude,
+      farmerLongitude,
+      basePrice: pricing.basePrice,
+      distanceKm: pricing.distanceKm,
+      distanceCharge: pricing.distanceCharge,
+      fuelSurcharge: pricing.fuelSurcharge,
+      totalPrice: pricing.totalPrice,
+      finalPrice: pricing.finalPrice,
+      zoneName: pricing.zoneName,
+      airDistance: pricing.airDistance,
+      roadDistance: pricing.roadDistance,
+      hubName: pricing.hubName,
+      hubLocation: pricing.hubLocation,
+      hubLatitude: pricing.hubLatitude,
+      hubLongitude: pricing.hubLongitude,
+      locationFixed: true
+    },
+    include: {
+      farmer: { select: { name: true, phone: true } },
+      service: { select: { name: true } }
+    }
+  });
+};
+
+/**
+ * Manually record a cash payment for a USSD booking.
+ * Calculates remaining balance and updates payment status accordingly.
+ */
+export const recordCashPayment = async (bookingId, amount) => {
+  const bId = parseInt(bookingId);
+  const paymentAmount = parseFloat(amount);
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: bId },
+    include: { payments: true }
+  });
+
+  if (!booking) throw new Error('Booking not found');
+  if (booking.source !== 'USSD') throw new Error('Cash recording is only enabled for USSD bookings');
+
+  const currentPaid = booking.payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPrice = booking.finalPrice || booking.totalPrice || 0;
+  
+  if (currentPaid >= (totalPrice - 0.01)) throw new Error('Booking is already fully paid');
+  
+  const remaining = totalPrice - currentPaid;
+  if (paymentAmount > (remaining + 0.01)) throw new Error(`Entered amount exceeding balance (${remaining.toFixed(2)})`);
+
+  // 1. Create Payment record
+  await prisma.payment.create({
+    data: {
+      bookingId: bId,
+      amount: paymentAmount,
+      method: 'cash',
+      status: (currentPaid + paymentAmount) >= (totalPrice - 0.01) ? 'full' : 'partial'
+    }
+  });
+
+  // 2. Update Booking status
+  const newPaidTotal = currentPaid + paymentAmount;
+  const newStatus = newPaidTotal >= (totalPrice - 0.01) ? 'PAID' : 'PARTIAL';
+
+  return await prisma.booking.update({
+    where: { id: bId },
+    data: {
+      paymentStatus: newStatus
+    },
+    include: {
+      farmer: { select: { name: true, phone: true } },
+      service: { select: { name: true } },
+      payments: true
+    }
+  });
+};
+

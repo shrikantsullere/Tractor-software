@@ -157,7 +157,7 @@ export const calculateBookingPrice = async (serviceType, landSize, zoneId = null
  *   'later'   → No Payment record (default, cash at hub)
  */
 export const createBookingRequest = async (farmerId, bookingData) => {
-  const { serviceType, landSize, location, zoneId, farmerLatitude, farmerLongitude, paymentOption } = bookingData;
+  const { serviceType, landSize, location, zoneId, farmerLatitude, farmerLongitude, paymentOption, source = 'WEB', locationFixed = true } = bookingData;
 
   if (paymentOption === 'later') {
     throw new Error('Digital payment is mandatory. Cash payments are no longer supported.');
@@ -188,7 +188,9 @@ export const createBookingRequest = async (farmerId, bookingData) => {
       hubLatitude: pricing.hubLatitude,
       hubLongitude: pricing.hubLongitude,
       status: 'PENDING',
-      paymentStatus: 'PENDING' // Initial state before payment redirect
+      paymentStatus: 'PENDING', // Initial state before payment redirect
+      source,
+      locationFixed
     },
     include: {
       service: true
@@ -215,7 +217,9 @@ export const createBookingWithInitialPayment = async (farmerId, bookingData) => 
     farmerLatitude, 
     farmerLongitude, 
     paymentOption,
-    paymentMethod = 'online'
+    paymentMethod = 'online',
+    source = 'WEB',
+    locationFixed = true
   } = bookingData;
 
   if (paymentOption === 'later') {
@@ -256,7 +260,9 @@ export const createBookingWithInitialPayment = async (farmerId, bookingData) => 
         hubLatitude: pricing.hubLatitude,
         hubLongitude: pricing.hubLongitude,
         status: 'PENDING',
-        paymentStatus: finalPaymentStatus
+        paymentStatus: finalPaymentStatus,
+        source,
+        locationFixed
       },
       include: {
         service: true

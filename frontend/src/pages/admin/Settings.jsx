@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Fuel, MapPin, Banknote, Wrench, Settings as SettingsIcon, Save, Info, CheckCircle2, AlertTriangle, ShieldCheck, Trash2, Edit, Search, Plus, X, Calculator } from 'lucide-react';
+import { Fuel, MapPin, Banknote, Wrench, Settings as SettingsIcon, Save, Info, CheckCircle2, AlertTriangle, ShieldCheck, Trash2, Edit, Search, Plus, X, Calculator, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -18,7 +18,7 @@ export default function Settings() {
   } = useSettings();
 
   const tabFromPath = location.pathname.split('/').pop();
-  const validTabs = ['pricing', 'fuel', 'zones', 'rates', 'maintenance'];
+  const validTabs = ['pricing', 'fuel', 'zones', 'rates', 'maintenance', 'ussd'];
   const activeTab = validTabs.includes(tabFromPath) ? tabFromPath : 'general';
 
   const [localGeneral, setLocalGeneral] = useState(generalInfo);
@@ -52,6 +52,16 @@ export default function Settings() {
   const [editServiceRate, setEditServiceRate] = useState('');
   const [editServiceDate, setEditServiceDate] = useState('');
 
+  // USSD Locations state
+  const [ussdLocations, setUssdLocations] = useState([]);
+  const [newUssdName, setNewUssdName] = useState('');
+  const [newUssdCharge, setNewUssdCharge] = useState('');
+  const [newUssdStatus, setNewUssdStatus] = useState(true);
+  const [editingUssdId, setEditingUssdId] = useState(null);
+  const [ussdError, setUssdError] = useState('');
+  const [ussdSearchTerm, setUssdSearchTerm] = useState('');
+  const [isUssdLoading, setIsUssdLoading] = useState(false);
+
   const fetchFuelHistory = async () => {
     try {
       const res = await api.admin.getFuelHistory();
@@ -61,9 +71,25 @@ export default function Settings() {
     }
   };
 
+  const fetchUssdLocations = async () => {
+    try {
+      setIsUssdLoading(true);
+      const res = await api.admin.listUssdLocations();
+      if (res.success) setUssdLocations(res.data);
+    } catch (e) {
+      console.error('Failed to fetch USSD locations:', e);
+    } finally {
+      setIsUssdLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (showFuelHistory) fetchFuelHistory();
   }, [showFuelHistory]);
+
+  useEffect(() => {
+    if (activeTab === 'ussd') fetchUssdLocations();
+  }, [activeTab]);
 
   useEffect(() => {
     setLocalFuel({
@@ -85,6 +111,7 @@ export default function Settings() {
     { id: 'pricing', label: 'Pricing Settings', icon: Calculator },
     { id: 'fuel', label: 'Fuel Metrics', icon: Fuel },
     { id: 'zones', label: 'Distance Zones', icon: MapPin },
+    { id: 'ussd', label: 'USSD Locations', icon: Zap },
     { id: 'rates', label: 'Service Rates', icon: Banknote },
     { id: 'maintenance', label: 'Maintenance Hub', icon: Wrench },
   ];
@@ -195,10 +222,72 @@ export default function Settings() {
     }
   };
 
+  const handleSaveUssd = async () => {
+    if (newUssdName.trim() === '' || newUssdCharge === '') return;
+    try {
+      const payload = {
+        name: newUssdName.trim(),
+        chargePerHectare: parseFloat(newUssdCharge),
+        isActive: newUssdStatus
+      };
+
+      let res;
+      if (editingUssdId !== 'new' && editingUssdId !== null) {
+        res = await api.admin.updateUssdLocation(editingUssdId, payload);
+      } else {
+        res = await api.admin.createUssdLocation(payload);
+      }
+
+      if (res.success) {
+        await fetchUssdLocations();
+        setNewUssdName('');
+        setNewUssdCharge('');
+        setNewUssdStatus(true);
+        setEditingUssdId(null);
+        setUssdError('');
+      } else {
+        setUssdError(res.message || 'Failed to save USSD location');
+      }
+    } catch (e) {
+      setUssdError(e.message || 'USSD Location error');
+    }
+  };
+
+  const handleEditUssdClick = (loc) => {
+    setNewUssdName(loc.name);
+    setNewUssdCharge(loc.chargePerHectare.toString());
+    setNewUssdStatus(loc.isActive);
+    setUssdError('');
+    setEditingUssdId(loc.id);
+  };
+
+  const handleCancelUssdEdit = () => {
+    setNewUssdName('');
+    setNewUssdCharge('');
+    setNewUssdStatus(true);
+    setUssdError('');
+    setEditingUssdId(null);
+  };
+
+  const handleDeleteUssd = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this USSD location?')) return;
+    try {
+      const res = await api.admin.deleteUssdLocation(id);
+      if (res.success) fetchUssdLocations();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const filteredZones = zones.filter(z => 
     z.minDistance?.toString().includes(zoneSearchTerm) ||
     z.maxDistance?.toString().includes(zoneSearchTerm) ||
     z.surchargePerHectare?.toString().includes(zoneSearchTerm)
+  );
+
+  const filteredUssdLocations = ussdLocations.filter(loc => 
+    loc.name.toLowerCase().includes(ussdSearchTerm.toLowerCase()) ||
+    loc.chargePerHectare.toString().includes(ussdSearchTerm)
   );
 
   return (
@@ -940,6 +1029,252 @@ export default function Settings() {
                         should exist for out-of-boundary range coverage.
                       </p>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* USSD Locations Settings */}
+            {activeTab === 'ussd' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-black text-earth-brown uppercase tracking-tight italic flex items-center gap-2">
+                       USSD Village Radii
+                       <Zap size={18} className="text-earth-primary" />
+                    </h3>
+                    <p className="text-[10px] font-bold text-earth-mut uppercase tracking-widest mt-1">Manage static locations and fixed pricing for USSD bookings.</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-earth-mut" size={14} />
+                      <Input 
+                        value={ussdSearchTerm}
+                        onChange={(e) => setUssdSearchTerm(e.target.value)}
+                        placeholder="Search villages..." 
+                        className="pl-9 bg-earth-card border-earth-dark/10 rounded-xl h-11 w-full focus:ring-0 focus:border-earth-primary shadow-inner text-xs font-bold text-earth-brown"
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        handleCancelUssdEdit();
+                        setEditingUssdId('new'); 
+                      }}
+                      className="bg-earth-brown text-white hover:bg-earth-brown/90 px-5 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shrink-0 shadow-lg"
+                    >
+                      <Plus size={16} /> Add Location
+                    </Button>
+                  </div>
+                </div>
+
+                {editingUssdId === 'new' && (
+                  <div className="p-6 bg-earth-card border-2 border-earth-primary/20 rounded-3xl shadow-xl space-y-6 animate-in fade-in zoom-in duration-300 text-left">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-black text-earth-brown uppercase tracking-[0.2em]">Register New USSD Village</h4>
+                      <Button variant="ghost" size="sm" onClick={handleCancelUssdEdit} className="text-earth-mut hover:text-earth-brown">
+                        <X size={18} />
+                      </Button>
+                    </div>
+
+                    {ussdError && (
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-2">
+                        <AlertTriangle size={16} /> {ussdError}
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase font-black tracking-widest text-earth-sub pl-1">Village Name</label>
+                        <Input 
+                          placeholder="e.g. Igarra"
+                          value={newUssdName} 
+                          onChange={(e) => setNewUssdName(e.target.value)}
+                          className="bg-earth-main border-earth-dark/10 font-black text-earth-brown h-12 rounded-xl focus:border-earth-primary shadow-inner" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase font-black tracking-widest text-earth-sub pl-1">Charge Per Hectare</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-earth-primary font-black">₦</div>
+                          <Input 
+                            type="number" 
+                            placeholder="0"
+                            value={newUssdCharge} 
+                            onChange={(e) => setNewUssdCharge(e.target.value)}
+                            className="pl-8 bg-earth-main border-earth-dark/10 font-black text-earth-brown h-12 rounded-xl focus:border-earth-primary shadow-inner" 
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase font-black tracking-widest text-earth-sub pl-1">Initial Status</label>
+                        <select 
+                          value={newUssdStatus ? 'true' : 'false'} 
+                          onChange={(e) => setNewUssdStatus(e.target.value === 'true')}
+                          className="w-full bg-earth-main border border-earth-dark/10 font-black text-earth-brown h-12 rounded-xl focus:border-earth-primary shadow-inner px-4 text-xs appearance-none cursor-pointer"
+                        >
+                          <option value="true">ACTIVE</option>
+                          <option value="false">INACTIVE</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCancelUssdEdit}
+                        className="bg-transparent border-earth-dark/15 text-earth-brown uppercase font-black tracking-widest rounded-xl h-11 px-6 text-[10px]"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleSaveUssd} 
+                        className="bg-accent hover:opacity-90 text-white uppercase font-black tracking-widest rounded-xl h-11 px-8 text-[10px] shadow-lg shadow-accent/20"
+                      >
+                        Confirm Entry
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-earth-card border border-earth-dark/10 rounded-3xl overflow-hidden shadow-lg">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-earth-dark/10 bg-earth-main/50">
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-sub uppercase tracking-widest italic">ID</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-sub uppercase tracking-widest italic">Village Name</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-sub uppercase tracking-widest italic">Charge / Ha</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-sub uppercase tracking-widest italic">Status</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black text-earth-sub uppercase tracking-widest italic">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isUssdLoading ? (
+                        <tr>
+                          <td colSpan="5" className="py-12 text-center text-earth-mut font-black uppercase text-[10px] tracking-widest animate-pulse italic">
+                            Synchronizing Village Ledger...
+                          </td>
+                        </tr>
+                      ) : filteredUssdLocations.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="py-12 text-center text-earth-mut font-black uppercase text-[10px] tracking-widest italic opacity-50 border-t border-earth-dark/10">
+                            Node Activity Null &bull; No locations found.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUssdLocations.map((loc) => (
+                          <tr key={loc.id} className={cn(
+                            "group hover:bg-earth-primary/5 transition-colors border-t border-earth-dark/10",
+                            editingUssdId === loc.id && "bg-earth-primary/10"
+                          )}>
+                            <td className="px-6 py-5 text-xs font-black text-earth-mut">#{loc.id}</td>
+                            <td className="px-6 py-5">
+                              {editingUssdId === loc.id ? (
+                                <Input 
+                                  value={newUssdName} 
+                                  onChange={(e) => setNewUssdName(e.target.value)} 
+                                  className="h-9 text-xs font-bold bg-white" 
+                                />
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-lg bg-earth-main flex items-center justify-center text-earth-primary shadow-sm border border-earth-dark/5">
+                                    <Zap size={14} />
+                                  </div>
+                                  <span className="text-sm font-black text-earth-brown">{loc.name}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-5">
+                              {editingUssdId === loc.id ? (
+                                <div className="relative">
+                                  <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-earth-primary font-black text-[10px]">₦</div>
+                                  <Input 
+                                    type="number" 
+                                    value={newUssdCharge} 
+                                    onChange={(e) => setNewUssdCharge(e.target.value)} 
+                                    className="pl-6 h-9 text-xs font-bold bg-white" 
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-sm font-black text-earth-primary">{formatCurrency(loc.chargePerHectare)}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-5">
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const res = await api.admin.updateUssdLocation(loc.id, { isActive: !loc.isActive });
+                                    if (res.success) fetchUssdLocations();
+                                    else {
+                                      setUssdError(res.message);
+                                      setTimeout(() => setUssdError(''), 3000);
+                                    }
+                                  } catch(e) { 
+                                    setUssdError(e.message);
+                                    setTimeout(() => setUssdError(''), 3000);
+                                  }
+                                }}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
+                                  loc.isActive 
+                                    ? "bg-green-500/10 text-green-600 border border-green-500/20" 
+                                    : "bg-red-500/10 text-red-600 border border-red-500/20 opacity-60"
+                                )}
+                              >
+                                <div className={cn("w-1 h-1 rounded-full", loc.isActive ? "bg-green-500 animate-pulse" : "bg-red-500")}></div>
+                                {loc.isActive ? 'Active' : 'Offline'}
+                              </button>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingUssdId === loc.id ? (
+                                  <>
+                                    <button 
+                                      onClick={handleSaveUssd} 
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all font-black"
+                                    >
+                                      <CheckCircle2 size={16} />
+                                    </button>
+                                    <button 
+                                      onClick={handleCancelUssdEdit} 
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button 
+                                      onClick={() => handleEditUssdClick(loc)} 
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-earth-sub hover:bg-earth-primary/20 hover:text-earth-brown transition-all"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteUssd(loc.id)} 
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-all"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-5 bg-blue-500/5 rounded-3xl border border-blue-500/20 flex gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                    <Info size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-earth-brown uppercase tracking-widest mb-1">Static Village Mapping (USSD Only)</p>
+                    <p className="text-[9px] font-bold text-earth-mut uppercase tracking-wider leading-relaxed">
+                      These locations are optimized for feature phones. The system enforces a strict <strong>6-8 active village limit</strong> to maintain interface usability. 
+                      Charges here override global zone metrics for USSD-sourced bookings.
+                    </p>
                   </div>
                 </div>
               </div>

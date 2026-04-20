@@ -7,9 +7,10 @@ import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import 'leaflet/dist/leaflet.css';
 
+const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 const TRACKING_ROOM = 'default-room';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 const getDistance = (p1, p2) => {
   if (!p1 || !p2) return 0;

@@ -16,8 +16,8 @@ import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { formatCurrency } from '../../lib/format';
 
-// const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
-const SOCKET_URL = 'http://localhost:5000'
+const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
+// const SOCKET_URL = 'http://localhost:5000'
 
 // const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
