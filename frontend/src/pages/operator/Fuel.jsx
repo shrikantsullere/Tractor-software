@@ -5,6 +5,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { api, clearApiCache } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
+import API_BASE_URL from '../../config/api';
+
 
 export default function Fuel() {
   const [fuelLogs, setFuelLogs] = useState([]);
@@ -222,10 +224,10 @@ export default function Fuel() {
                       {log.receiptUrl && (
                         <span className="flex items-center gap-1 text-blue-500 text-[8px] font-black uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 shadow-sm cursor-pointer hover:bg-blue-500 hover:text-white transition-colors" onClick={() => {
                             if (log.receiptUrl.endsWith('.pdf')) {
-                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `http://localhost:5000${log.receiptUrl}`, '_blank');
+                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `${API_BASE_URL}${log.receiptUrl}`, '_blank');
                             } else {
                               // Could open preview modal, but opening in new tab is safe fallback
-                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `http://localhost:5000${log.receiptUrl}`, '_blank');
+                              window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `${API_BASE_URL}${log.receiptUrl}`, '_blank');
                             }
                           }}>
                           <FileText size={8} /> View Receipt

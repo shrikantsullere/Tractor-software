@@ -15,11 +15,9 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { api } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import { formatCurrency } from '../../lib/format';
+import API_BASE_URL from '../../config/api';
 
-const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
-// const SOCKET_URL = 'http://localhost:5000'
-
-// const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = API_BASE_URL;
 const DEFAULT_CENTER = { lat: 30.900965, lng: 75.857277 };
 const OPENFREE_TILES = 'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png';
 const OSM_FALLBACK_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';

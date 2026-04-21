@@ -446,6 +446,3 @@ export default function Dispatch() {
     </div>
   );
 }
-    </div>
-  );
-}

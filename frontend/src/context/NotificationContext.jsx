@@ -2,13 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { io } from 'socket.io-client';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
+import API_BASE_URL from '../config/api';
 
 const NotificationContext = createContext();
 
-const SOCKET_URL = 'https://tractor-bakend-production.up.railway.app'
-// const SOCKET_URL = 'http://localhost:5000'
-
-// const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = API_BASE_URL;
 
 export const NotificationProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();

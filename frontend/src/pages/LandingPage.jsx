@@ -85,7 +85,7 @@ const LandingPage = () => {
           <div className="flex items-center space-x-3 py-4">
             <img src="/tractorlink-logo.png" alt="TractorLink Logo" className="w-12 h-12 object-contain" />
             <span className="text-2xl font-black text-[#1A2218] tracking-tight uppercase">
-              Tractor <span className="text-[#FF9800]">Link</span>
+              Tractor <span className="text-accent">Link</span>
             </span>
           </div>
 
@@ -180,9 +180,6 @@ const LandingPage = () => {
                 onClick={handleBookClick}
               >
                 Book Now <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button className="border-2 border-accent text-accent px-8 py-4 rounded-2xl font-bold text-lg hover:bg-accent hover:text-white transition-all flex items-center justify-center gap-2 group">
-                <PhoneCall size={20} className="group-hover:rotate-12 transition-transform" /> Call Hub
               </button>
             </div>
             
@@ -297,7 +294,7 @@ const LandingPage = () => {
               { icon: <WifiOff />, title: "Offline Booking", desc: "Book services via USSD even without internet connectivity in rural areas." },
               { icon: <ShieldCheck />, title: "Operator Verified", desc: "All operators are vetted and jobs are monitored for quality assurance." },
               { icon: <ShieldCheck />, title: "Secure Payments", desc: "Multiple payment options including Mobile Money and card payments." },
-              { icon: <Users />, title: "Referral Rewards", desc: "Earn credits for every fellow farmer you invite to the TractorLink platform." }
+              { icon: <BarChart3 />, title: "Data-Driven Analytics", desc: "Access comprehensive analytics to optimize your farm's productivity." }
             ].map((feature, idx) => (
               <motion.div 
                 key={idx}
@@ -328,21 +325,16 @@ const LandingPage = () => {
             <motion.div {...fadeIn} className="bg-white p-10 rounded-[2rem] border-2 border-dashed border-[#2E7D32]/20 shadow-sm">
               <div className="space-y-6">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
-                  <span className="font-medium text-[#1F2937]/70">Base Rate per Hectare</span>
-                  <span className="font-bold text-primary">{formatCurrency(25000)}</span>
+                  <span className="font-medium text-[#1F2937]/70">Base Price (5 ha)</span>
+                  <span className="font-bold text-primary">{formatCurrency(125000)}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
-                  <span className="font-medium text-[#1F2937]/70">Total Hectares</span>
-                  <span className="font-bold text-[#1F2937]">× 5.0</span>
+                  <span className="font-medium text-[#1F2937]/70">Distance Charge (10 km)</span>
+                  <span className="font-bold text-[#1F2937]">{formatCurrency(5000)}</span>
                 </div>
                 <div className="h-px bg-gray-200"></div>
-                <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
-                  <span className="font-medium text-[#1F2937]/70">Distance Charge (Fixed)</span>
-                  <span className="font-bold text-accent">+ {formatCurrency(5000)}</span>
-                </div>
-                <div className="h-px bg-gray-600"></div>
                 <div className="flex justify-between items-center p-6 bg-accent text-white rounded-2xl shadow-xl">
-                  <span className="text-xl font-bold">Total Quote</span>
+                  <span className="text-xl font-bold">Total Amount</span>
                   <span className="text-3xl font-extrabold text-white">{formatCurrency(130000)}</span>
                 </div>
                 <div className="flex justify-center">
@@ -370,7 +362,7 @@ const LandingPage = () => {
                   </li>
                 ))}
               </ul>
-              <button className="bg-accent text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-all">
+              <button onClick={handleBookClick} className="bg-accent text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition-all">
                 Check My Price
               </button>
             </motion.div>
@@ -692,7 +684,7 @@ const LandingPage = () => {
               <div className="flex items-center space-x-3 mb-6">
                 <img src="/tractorlink-logo.png" alt="TractorLink Logo" className="w-10 h-10 object-contain" />
                 <span className="text-xl font-black text-[#1A2218] tracking-tight uppercase">
-                  Tractor <span className="text-primary">Link</span>
+                  Tractor <span className="text-accent">Link</span>
                 </span>
               </div>
               <p className="text-sm text-[#1F2937]/50 max-w-xs">

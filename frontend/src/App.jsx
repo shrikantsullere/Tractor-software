@@ -129,7 +129,7 @@ function Login() {
         <div className="relative z-10 max-w-lg text-white">
           <h1 className="text-5xl font-black mb-6 flex items-center gap-4 text-white uppercase">
             <img src="/tractorlink-logo.png" alt="TractorLink Logo" className="w-24 h-24 object-contain drop-shadow-xl" />
-            TractorLink
+            Tractor<span className="text-accent">Link</span>
           </h1>
           <p className="text-xl text-white/90 font-bold leading-relaxed">
             The leading smart agriculture network connecting farm owners with machinery and professional operators seamlessly.
@@ -162,7 +162,7 @@ function Login() {
         <div className="w-full max-w-md m-auto">
           
           <div className="lg:hidden flex items-center gap-3 mb-12 text-earth-brown font-black text-2xl sm:text-3xl mt-4">
-            <img src="/tractorlink-logo.png" alt="TractorLink Logo" className="w-12 h-12 sm:w-14 sm:h-14 object-contain" /> TractorLink
+            <img src="/tractorlink-logo.png" alt="TractorLink Logo" className="w-12 h-12 sm:w-14 sm:h-14 object-contain" /> Tractor<span className="text-accent">Link</span>
           </div>
           
           <div className="mb-8">

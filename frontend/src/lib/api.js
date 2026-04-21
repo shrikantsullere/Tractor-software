@@ -1,7 +1,7 @@
+import API_BASE_URL from '../config/api';
+
 // Base URL for the backend API
-// const API_URL = 'http://localhost:5000/api'
-// const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
-const API_URL = 'https://tractor-bakend-production.up.railway.app/api'
+const API_URL = `${API_BASE_URL}/api`;
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { api, clearApiCache } from '../../lib/api';
 import { cn } from '../../lib/utils';
 import useScrollLock from '../../hooks/useScrollLock';
+import API_BASE_URL from '../../config/api';
 
 export default function FuelLogs() {
   const [logs, setLogs] = useState([]);
@@ -321,7 +322,7 @@ export default function FuelLogs() {
                          <button 
                            onClick={() => {
                              if (log.receiptUrl.endsWith('.pdf')) {
-                               window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `http://localhost:5000${log.receiptUrl}`, '_blank');
+                               window.open(log.receiptUrl.startsWith('http') ? log.receiptUrl : `${API_BASE_URL}${log.receiptUrl}`, '_blank');
                              } else {
                                setReceiptModal({ isOpen: true, url: log.receiptUrl });
                              }
@@ -422,7 +423,7 @@ export default function FuelLogs() {
               </button>
             </div>
             <div className="flex-1 overflow-auto rounded-xl bg-earth-card-alt flex items-center justify-center p-4 border border-earth-dark/10">
-              <img src={receiptModal.url?.startsWith('http') ? receiptModal.url : `http://localhost:5000${receiptModal.url}`} alt="Fuel Receipt" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm" />
+              <img src={receiptModal.url?.startsWith('http') ? receiptModal.url : `${API_BASE_URL}${receiptModal.url}`} alt="Fuel Receipt" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm" />
             </div>
           </div>
         </div>,
