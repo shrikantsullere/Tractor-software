@@ -48,6 +48,7 @@ The system operates on a **centralized fleet model**, where all tractors and ope
 - **Operator Management**: Direct enrollment and decommissioning of operator accounts
 - **Tractor Management**: Add, edit, assign operators, monitor maintenance
 - **Distance Zone Management**: Create, edit, activate/deactivate, delete zones  
+- **Fuel Management**: Review operator fuel submissions (Approve/Reject), monitor consumption KPIs, and track diesel price history.
 - View comprehensive analytics and reports (revenue, bookings, fleet, operators, export)
 - Monitor active jobs on live tracking map (Socket.IO)
 - Receive real-time notifications for new bookings and payments
@@ -208,6 +209,7 @@ The system operates on a **centralized fleet model**, where all tractors and ope
 - Job status distribution
 - Fleet utilization metrics
 - Farmer growth/registration trends
+- **Fuel Analytics**: Consumption per hectare and kilometer monitoring.
 - **Export**: Raw data export for bookings, revenue, operators
 
 ---

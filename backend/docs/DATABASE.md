@@ -147,6 +147,9 @@ erDiagram
         float cost
         string station
         string receipt_url
+        string status
+        int reviewed_by FK
+        datetime reviewed_at
         datetime created_at
     }
 
@@ -166,6 +169,15 @@ erDiagram
         string type
         boolean is_read
         datetime created_at
+    }
+
+    ussd_locations {
+        int id PK
+        string name UK
+        float charge_per_hectare
+        boolean is_active
+        datetime created_at
+        datetime updated_at
     }
 ```
 
@@ -354,31 +366,39 @@ Fleet inventory with maintenance tracking.
 ---
 
 ### 3.8 fuel_logs
-Tracks operator fuel consumption and expenses.
+Tracks operator fuel consumption and expenses with admin review lifecycle.
 
-| Column | Type | Notes |
-|:---|:---|:---|
-| id | Int (PK) | |
-| operator_id | Int (FK) | Links to users (operator) |
-| tractor_id | Int? (FK) | Links to tractors (optional) |
-| liters | Float | Fuel amount in liters |
-| cost | Float | Total cost paid |
-| station | String | Fuel station name |
-| receipt_url | String? | Upload link (optional) |
-| created_at | DateTime | |
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| operator_id | Int (FK) | required | Links to users (operator) |
+| tractor_id | Int? (FK) | optional | Links to tractors |
+| liters | Float | required | Fuel amount in liters |
+| cost | Float | required | Total cost paid |
+| station | String | required | Fuel station name |
+| receipt_url | String? | optional | Upload link |
+| status | String | `PENDING` | `PENDING` \| `APPROVED` \| `REJECTED` |
+| reviewed_by | Int? (FK) | optional | Links to users (admin) |
+| reviewed_at | DateTime? | optional | |
+| created_at | DateTime | now() | |
+
+**Relations:**
+- `operator` → User (via OperatorFuelLogs)
+- `tractor` → Tractor (via TractorFuelLogs)
+- `reviewer` → User (via AdminFuelLogReviews)
 
 ---
 
 ### 3.9 fuel_price_logs
 Audit trail for diesel price changes.
 
-| Column | Type | Notes |
-|:---|:---|:---|
-| id | Int (PK) | |
-| old_price | Float | Previous diesel price |
-| new_price | Float | New diesel price |
-| admin_id | Int | Admin who made the change |
-| timestamp | DateTime | When the change was made |
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| old_price | Float | required | |
+| new_price | Float | required | |
+| admin_id | Int | required | Admin who made the change |
+| timestamp | DateTime | now() | |
 
 ---
 
@@ -390,10 +410,24 @@ System-wide notification storage.
 | id | Int (PK) | autoincrement | |
 | user_id | Int (FK) | required | Target user |
 | role | String | required | `admin` \| `farmer` \| `operator` |
-| message | Text | required | Notification message |
+| message | Text | required | |
 | type | String | required | `booking` \| `assignment` \| `tracking` \| `payment` |
-| is_read | Boolean | false | Read status |
+| is_read | Boolean | false | |
 | created_at | DateTime | now() | |
+
+---
+
+### 3.11 ussd_locations
+Registry of locations and rates for USSD-based offline bookings.
+
+| Column | Type | Default | Notes |
+|:---|:---|:---|:---|
+| id | Int (PK) | autoincrement | |
+| name | String (Unique) | required | Location name used in USSD menus |
+| charge_per_hectare | Float | required | Specific rate for this area |
+| is_active | Boolean | true | |
+| created_at | DateTime | now() | |
+| updated_at | DateTime | auto | |
 
 ---
 

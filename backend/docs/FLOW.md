@@ -144,7 +144,22 @@ Operators broadcast their location via Socket.IO during `IN_PROGRESS` state.
 
 ---
 
-## 9. Summary
+## 9. Admin Fuel Management Flow
+
+This flow handles the lifecycle of fuel expense tracking and validation.
+
+1. **Submission** (Operator):
+   - Operator submits a fuel log (liters, cost, station) + Receipt Image.
+   - Entry created with `status: PENDING`.
+2. **Review** (Admin):
+   - Admin reviews the receipt and log details.
+   - Admin sets status to `APPROVED` or `REJECTED`.
+3. **Audit**:
+   - Every change to global `dieselPrice` creates an entry in `fuel_price_logs` index (audit trail).
+
+---
+
+## 10. Summary
 
 This flow ensures:
 - Mandatory digital payments for service security.

@@ -25,6 +25,8 @@ The architecture ensures:
 - Validation: Zod (Schema validation)
 - Real-Time: Socket.IO (HTTP server + WebSocket)
 - Password Hashing: bcryptjs
+- Storage: Multer (Local disk storage for receipts)
+- Frontend Connectivity: Vite Environment Variables (VITE_API_BASE_URL)
 
 ---
 
@@ -147,12 +149,12 @@ Rules:
 | `auth.service.js` | User registration, login authentication, user lookup |
 | `booking.service.js` | Price calculation engine, booking CRUD, farmer booking queries |
 | `farmer.service.js` | Farmer dashboard metrics, recent activity, upcoming jobs |
-| `fuel.service.js` | Operator fuel log CRUD, consumption summary |
+| `fuel.service.js` | Operator fuel log CRUD, consumption summary, **Admin review lifecycle (Approval/Rejection)** |
 | `notification.service.js` | Persistent + real-time notification delivery (class-based) |
 | `operator.service.js` | Job lifecycle management, stats, status transitions |
-| `payment.service.js` | Farmer payment processing, pending dues, payment history |
-| `report.service.js` | Revenue, service usage, bookings analytics, operator performance, fleet, farmer growth, export |
-| `settings.service.js` | System config CRUD, zone management, service rate management |
+| `payment.service.js` | Farmer payment processing, pending dues, manual back-office settlement |
+| `report.service.js` | Revenue, service usage, bookings analytics, operator performance, fleet health, farmer growth, data export |
+| `settings.service.js` | System config CRUD, zone management, service rate management, **USSD Location management** |
 
 ---
 
@@ -180,7 +182,18 @@ Rules:
 
 ---
 
-## 6. Server Entry Point (`src/index.js`)
+## 6. Frontend Connectivity (Centralized API)
+
+The system uses a centralized API configuration for the frontend to maintain compatibility across different environments (local vs production).
+
+- **Location**: `frontend/src/config/api.js`
+- **Mechanism**: Reads `import.meta.env.VITE_API_BASE_URL`.
+- **Default**: Falls back to `http://localhost:5000` if no env is set.
+- **Usage**: All axios/fetch calls and Socket.IO initializations must import and use this `API_BASE_URL` constant.
+
+---
+
+## 7. Server Entry Point (`src/index.js`)
 
 The entry point sets up:
 1. Express app with CORS and JSON middleware
