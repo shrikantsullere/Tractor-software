@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tractor, MapPin, Navigation, Mail, Info, CheckCircle, Calculator, Map as MapIcon, Loader2, ArrowRight, X, Clock, LocateFixed } from 'lucide-react';
+import { Tractor, MapPin, Navigation, Mail, Info, CheckCircle, Calculator, Map as MapIcon, Loader2, ArrowRight, X, Clock, LocateFixed, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -19,6 +19,13 @@ export default function BookTractor() {
   const { addBooking } = useBookings();
   
   const [service, setService] = useState('Ploughing');
+  
+  useEffect(() => {
+    if (systemServices.length > 0 && !systemServices.find(s => s.name.toLowerCase() === service.toLowerCase())) {
+      const firstAvailable = systemServices[0].name;
+      setService(firstAvailable.charAt(0).toUpperCase() + firstAvailable.slice(1));
+    }
+  }, [systemServices]);
   const [landSize, setLandSize] = useState('');
   const [location, setLocation] = useState('');
   const [farmerLatitude, setFarmerLatitude] = useState('');
@@ -314,17 +321,24 @@ export default function BookTractor() {
                     );
                   })}
                 </div>
-                {systemServices && systemServices.find(s => s.name === service.toLowerCase())?.description && (
-                  <div className="mt-4 p-3.5 bg-earth-card border border-earth-dark/10 rounded-xl flex gap-3 items-start shadow-sm transition-all group hover:border-earth-primary/30">
-                    <Info size={16} className="text-earth-primary mt-0.5 shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-earth-mut mb-1 block">Service Description</span>
-                      <p className="text-xs font-bold text-earth-sub leading-relaxed">
-                        {systemServices.find(s => s.name === service.toLowerCase()).description}
-                      </p>
+                {systemServices && systemServices.find(s => s.name.toLowerCase() === service.toLowerCase()) ? (
+                  systemServices.find(s => s.name.toLowerCase() === service.toLowerCase())?.description && (
+                    <div className="mt-4 p-3.5 bg-earth-card border border-earth-dark/10 rounded-xl flex gap-3 items-start shadow-sm transition-all group hover:border-earth-primary/30">
+                      <Info size={16} className="text-earth-primary mt-0.5 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-earth-mut mb-1 block">Service Description</span>
+                        <p className="text-xs font-bold text-earth-sub leading-relaxed">
+                          {systemServices.find(s => s.name.toLowerCase() === service.toLowerCase()).description}
+                        </p>
+                      </div>
                     </div>
+                  )
+                ) : systemServices.length > 0 ? (
+                  <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex gap-3 items-center">
+                    <AlertTriangle size={18} className="text-red-500" />
+                    <p className="text-xs font-black text-red-500 uppercase tracking-widest">Service not available</p>
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Input Grid */}

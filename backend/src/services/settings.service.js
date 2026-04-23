@@ -244,21 +244,29 @@ export const deleteZone = async (id) => {
 };
 
 /**
- * Update a single service rate and effective date.
+ * Update a single service rate, effective date, and status.
  */
-export const updateService = async (id, rate, effectiveDate) => {
+export const updateService = async (id, data) => {
   const serviceId = parseInt(id);
-  const baseRate = parseFloat(rate);
-  
-  if (isNaN(baseRate) || baseRate <= 0) throw new Error('Service rate must be a positive number');
-  if (!effectiveDate) throw new Error('Effective date is required');
+  const updatePayload = {};
+
+  if (data.baseRatePerHectare !== undefined) {
+    const baseRate = parseFloat(data.baseRatePerHectare);
+    if (isNaN(baseRate) || baseRate <= 0) throw new Error('Service rate must be a positive number');
+    updatePayload.baseRatePerHectare = baseRate;
+  }
+
+  if (data.effectiveDate) {
+    updatePayload.effectiveDate = new Date(data.effectiveDate);
+  }
+
+  if (data.isActive !== undefined) {
+    updatePayload.isActive = data.isActive;
+  }
 
   return await prisma.service.update({
     where: { id: serviceId },
-    data: { 
-      baseRatePerHectare: baseRate,
-      effectiveDate: new Date(effectiveDate)
-    }
+    data: updatePayload
   });
 };
 
@@ -286,7 +294,22 @@ export const updateServiceRates = async (ratesMap) => {
  */
 export const listServices = async () => {
   return await prisma.service.findMany({
+    where: { isDeleted: false },
     orderBy: { name: 'asc' }
+  });
+};
+
+/**
+ * Delete a service (Soft Delete).
+ */
+export const deleteService = async (id) => {
+  const serviceId = parseInt(id);
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  if (!service) throw new Error('Service not found');
+
+  return await prisma.service.update({
+    where: { id: serviceId },
+    data: { isDeleted: true, isActive: false }
   });
 };
 

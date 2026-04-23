@@ -7,6 +7,7 @@ import { sendSuccess, sendError } from '../../utils/response.js';
 export const listServices = async (req, res) => {
   try {
     const services = await prisma.service.findMany({
+      where: { isActive: true, isDeleted: false },
       orderBy: { name: 'asc' }
     });
     return sendSuccess(res, services, "Services retrieved successfully");

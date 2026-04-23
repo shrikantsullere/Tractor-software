@@ -100,9 +100,20 @@ export const updateServiceRates = async (req, res) => {
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { baseRatePerHectare, effectiveDate } = req.body;
-    const service = await settingsService.updateService(id, baseRatePerHectare, effectiveDate);
+    const data = req.body;
+    const service = await settingsService.updateService(id, data);
     return sendSuccess(res, service, "Service updated successfully");
+  } catch (error) {
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    return sendError(res, error.message, statusCode);
+  }
+};
+
+export const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await settingsService.deleteService(id);
+    return sendSuccess(res, null, "Service deleted successfully");
   } catch (error) {
     const statusCode = error.message.includes('not found') ? 404 : 400;
     return sendError(res, error.message, statusCode);

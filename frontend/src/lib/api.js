@@ -433,6 +433,11 @@ export const api = {
         body: JSON.stringify(serviceData)
       });
     },
+    deleteService: async (id) => {
+      return await fetchAPI(`/admin/services/${id}`, {
+        method: 'DELETE'
+      });
+    },
     // USSD Locations
     listUssdLocations: async () => {
       return await fetchAPI('/admin/settings/ussd-locations');

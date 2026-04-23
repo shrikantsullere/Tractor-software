@@ -76,7 +76,7 @@ async function processBookingFlow(phoneNumber, parts) {
       }
     } 
     else if (currentStep === 2) {
-      const services = await prisma.service.findMany({ orderBy: { name: 'asc' } });
+      const services = await prisma.service.findMany({ where: { isActive: true, isDeleted: false }, orderBy: { name: 'asc' } });
       const idx = parseInt(input) - 1;
       if (!isNaN(idx) && services[idx]) {
         service = services[idx];
@@ -122,7 +122,7 @@ async function processBookingFlow(phoneNumber, parts) {
     return `CON ${errorMessage}Enter land size (hectares):`;
   }
   if (currentStep === 2) {
-    const services = await prisma.service.findMany({ orderBy: { name: 'asc' } });
+    const services = await prisma.service.findMany({ where: { isActive: true, isDeleted: false }, orderBy: { name: 'asc' } });
     let menu = `CON ${errorMessage}Select Service:\n`;
     services.forEach((s, i) => {
       menu += `${i + 1}. ${s.name.charAt(0).toUpperCase() + s.name.slice(1)}\n`;

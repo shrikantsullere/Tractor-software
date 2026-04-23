@@ -89,6 +89,7 @@ router.delete('/settings/ussd-locations/:id', ussdLocationController.remove);
 router.get('/services', settingsController.listServices);
 router.put('/services', settingsController.updateServiceRates);
 router.put('/services/:id', settingsController.updateService);
+router.delete('/services/:id', settingsController.deleteService);
 
 export default router;
 

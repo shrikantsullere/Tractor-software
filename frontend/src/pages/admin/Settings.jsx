@@ -1303,6 +1303,7 @@ export default function Settings() {
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Service Name</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Rate Per Ha</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Effective Date</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em]">Status</th>
                         <th className="px-6 py-4 text-[10px] font-black text-earth-mut uppercase tracking-[0.2em] text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1359,18 +1360,55 @@ export default function Settings() {
                                 {new Date(s.effectiveDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                               </span>
                             </td>
-                            <td className="px-6 py-5 text-right">
+                            <td className="px-6 py-5">
                               <button 
-                                onClick={() => {
-                                  setEditingServiceId(s.id);
-                                  setEditServiceRate(s.baseRatePerHectare.toString());
-                                  setEditServiceDate(new Date(s.effectiveDate).toISOString().split('T')[0]);
-                                }} 
-                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-earth-sub hover:bg-earth-primary/20 hover:text-earth-brown transition-all"
-                                title="Edit Service"
+                                onClick={async () => {
+                                  try {
+                                    await updateService(s.id, { isActive: !s.isActive });
+                                    setSaveStatus('success');
+                                  } catch (e) { console.error(e); }
+                                }}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
+                                  s.isActive 
+                                    ? "bg-green-500/10 text-green-600 border border-green-500/20" 
+                                    : "bg-red-500/10 text-red-600 border border-red-500/20 opacity-60"
+                                )}
                               >
-                                <Edit size={16} />
+                                <div className={cn("w-1 h-1 rounded-full", s.isActive ? "bg-green-500 animate-pulse" : "bg-red-500")}></div>
+                                {s.isActive ? 'Active' : 'Inactive'}
                               </button>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setEditingServiceId(s.id);
+                                    setEditServiceRate(s.baseRatePerHectare.toString());
+                                    setEditServiceDate(new Date(s.effectiveDate).toISOString().split('T')[0]);
+                                  }} 
+                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-earth-sub hover:bg-earth-primary/20 hover:text-earth-brown transition-all"
+                                  title="Edit Rate"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to delete ${s.name}? This will hide it from the system.`)) return;
+                                    try {
+                                      const res = await api.admin.deleteService(s.id);
+                                      if (res.success) {
+                                        await refreshServices();
+                                        setSaveStatus('success');
+                                      }
+                                    } catch (e) { console.error(e); }
+                                  }} 
+                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-all"
+                                  title="Delete Service"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
@@ -1420,17 +1458,32 @@ export default function Settings() {
                             </div>
                             <span className="text-base font-black text-earth-brown capitalize">{s.name}</span>
                           </div>
-                          <Button 
-                            size="icon"
-                            onClick={() => {
-                              setEditingServiceId(s.id);
-                              setEditServiceRate(s.baseRatePerHectare.toString());
-                              setEditServiceDate(new Date(s.effectiveDate).toISOString().split('T')[0]);
-                            }}
-                            className="h-10 w-10 bg-earth-main text-earth-sub border border-earth-dark/15 rounded-xl hover:bg-earth-primary/10 hover:text-earth-primary transition-colors"
-                          >
-                             <Edit size={16} />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="icon"
+                              onClick={() => {
+                                setEditingServiceId(s.id);
+                                setEditServiceRate(s.baseRatePerHectare.toString());
+                                setEditServiceDate(new Date(s.effectiveDate).toISOString().split('T')[0]);
+                              }}
+                              className="h-10 w-10 bg-earth-main text-earth-sub border border-earth-dark/15 rounded-xl hover:bg-earth-primary/10 hover:text-earth-primary transition-colors"
+                            >
+                               <Edit size={16} />
+                            </Button>
+                            <Button 
+                              size="icon"
+                              onClick={async () => {
+                                if (!window.confirm(`Are you sure you want to delete ${s.name}?`)) return;
+                                try {
+                                  const res = await api.admin.deleteService(s.id);
+                                  if (res.success) await refreshServices();
+                                } catch (e) { console.error(e); }
+                              }}
+                              className="h-10 w-10 bg-red-500/5 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/10 transition-colors"
+                            >
+                               <Trash2 size={16} />
+                            </Button>
+                          </div>
                         </div>
   
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-earth-dark/5">
@@ -1443,6 +1496,22 @@ export default function Settings() {
                             <p className="text-xs font-black text-earth-brown">
                               {new Date(s.effectiveDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                             </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-earth-mut uppercase tracking-widest">Status</p>
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  await updateService(s.id, { isActive: !s.isActive });
+                                } catch (e) { console.error(e); }
+                              }}
+                              className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                s.isActive ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
+                              )}
+                            >
+                               {s.isActive ? 'Active' : 'Inactive'}
+                            </button>
                           </div>
                         </div>
                       </div>

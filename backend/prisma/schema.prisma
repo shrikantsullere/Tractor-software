@@ -38,6 +38,8 @@ model Service {
   updatedAt          DateTime  @updatedAt @map("updated_at")
   description        String?   @db.Text
   effectiveDate      DateTime  @default(now()) @map("effective_date")
+  isActive           Boolean   @default(true) @map("is_active")
+  isDeleted          Boolean   @default(false) @map("is_deleted")
   bookings           Booking[]
 
   @@map("services")
